@@ -1,0 +1,69 @@
+# Instruções para Geração da Landing Page Imobiliária
+
+## Contexto
+Você atuará como um Desenvolvedor Front-end Sênior e Especialista em CRO (Otimização de Conversão). Seu objetivo é criar o código completo de uma landing page imobiliária focada em conversão direta para o WhatsApp, utilizando os princípios de "curiosity gap" e carregamento ultra-rápido.
+
+## Stack Tecnológico
+- Next.js 15+ (App Router, diretório `src/app`)
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- Shadcn/UI (utilize os componentes nativos de botões e cards, se necessário)
+- Lucide Icons (para ícones de características e WhatsApp)
+
+*Nota: As bibliotecas Zod, React Hook Form e TanStack Query estão instaladas, mas NÃO devem ser utilizadas neste projeto, pois a conversão será via clique direto.*
+
+## Identidade Visual
+- **Cor Primária:** Azul escuro (ex: `bg-slate-900` ou `bg-blue-950`) para transmitir confiança e solidez.
+- **Cor de Ação (CTA):** Verde WhatsApp padrão (ex: `bg-green-500` hover `bg-green-600`) para botões de contato.
+- **Tipografia:** Limpa e moderna (Inter ou Roboto, padrão do Next.js).
+- **Design:** Minimalista, focado nas imagens do imóvel e tipografia forte.
+
+## Assets (Imagens locais)
+As imagens já estão na pasta `public/images/`. Os caminhos exatos que você deve usar nas tags `<Image />` do Next.js são:
+- `/images/Fachada.jpg` (Use como background da Hero Section)
+- `/images/Sala e Cozinha.jpg` | Versão IA: `/images/Sala e Cozinha - Mobiliado.png`
+- `/images/Quarto.jpg` | Versão IA: `/images/Quarto - Imobiliado.png`
+- `/images/Banheiro.jpg` | Versão IA: `/images/Banheiro - Imobiliado.png`
+
+## Estrutura da Página (`src/app/page.tsx`)
+
+A página deve ser "single page" e construída de cima para baixo com as seguintes seções:
+
+### 1. Hero Section (Acima da Dobra)
+- **Background:** Imagem `/images/Fachada.jpg` escurecida com um overlay (ex: `bg-black/60`) para dar leitura ao texto.
+- **Headline:** "APARTAMENTO NOVO À VENDA | LOTEAMENTO MIRAGE" (Destaque para o lançamento em Três Rios do Norte).
+- **Subheadline:** "80m² • 1 Suíte + 2 Dormitórios • Sacada com Churrasqueira"
+- **Destaque Financeiro:** Mostrar claramente "R$ 385.000,00" e uma tag/badge chamativa: "Pode ser financiado pelo Minha Casa Minha Vida".
+- **CTA Principal:** Botão grande verde com ícone do WhatsApp: "Falar com Corretora Agora".
+
+### 2. Galeria Interativa (O grande diferencial)
+- Crie um Client Component (`"use client"`) para renderizar os cards das fotos da parte interna.
+- Mostre os ambientes (Sala e Cozinha, Quarto, Banheiro).
+- **A Lógica do Botão "Mobiliado":** Embaixo ou sobreposto a cada imagem que possui a versão mobiliada, deve haver um botão de toggle estilo "Ver projeto mobiliado (Ilustrativo)".
+- Quando o usuário clicar, a imagem (`src`) deve trocar suavemente para a versão `.png` mobiliada, exibindo uma tarja amarela ou de destaque avisando: "Projeto Mobiliado - Imagem Ilustrativa gerada por IA".
+- Abaixo da galeria, insira um botão secundário: "Receber mais fotos e vídeos no WhatsApp".
+
+### 3. Diferenciais (Bullet Points)
+- Seção com fundo claro (ex: `bg-slate-50`).
+- Título: "Detalhes que fazem a diferença"
+- Use ícones do Lucide (ex: `CheckCircle`) para listar:
+  - Sala e cozinha integradas
+  - Ambientes amplos e bem distribuídos
+  - Excelente padrão de acabamento
+  - Região em constante valorização (Três Rios do Norte, Jaraguá do Sul)
+
+### 4. Rodapé e Autoridade (Corretora)
+- Fundo escuro (mesma cor primária do topo).
+- Nome: Cátia Ramos – Corretora de Imóveis
+- CRECI: 66755-F
+- Telefone: (47) 99617-4283
+- Texto curto: "Especialista na região, pronta para te ajudar com uma simulação de financiamento sem compromisso."
+- **CTA Final:** Botão grande do WhatsApp centralizado.
+
+## Requisitos Técnicos
+1. **Link do WhatsApp:** Crie uma função utilitária ou use uma constante para o link do WhatsApp formatado corretamente com uma mensagem pré-definida: `https://wa.me/5547996174283?text=Olá,%20Cátia!%20Gostaria%20de%20mais%20informações%20sobre%20o%20apartamento%20no%20Loteamento%20Mirage.`
+2. **Performance:** Utilize o componente `<Image />` do `next/image` garantindo `alt` descritivos e uso de `priority` na imagem da Fachada.
+3. **Responsividade:** A página deve ser *mobile-first*. Teste as larguras do Tailwind (ex: `flex-col md:flex-row`) para garantir que fique perfeita no celular.
+
+Gere o código separando responsabilidades em componentes quando julgar necessário (ex: um componente isolado para o `InteractiveImageCard` da galeria) e entregue a estrutura completa.
