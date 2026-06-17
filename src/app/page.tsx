@@ -60,7 +60,7 @@ export default function BrokerHomePage() {
             <div className="absolute inset-0 bg-blue-600 rounded-3xl rotate-6 opacity-10" />
             <div className="relative h-full w-full overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
               <Image
-                src="/images/foto-corretora.jpeg"
+                src="/images/foto-corretora.jpg"
                 alt="Cátia Manske"
                 fill
                 className="object-cover"

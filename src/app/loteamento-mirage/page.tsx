@@ -47,7 +47,7 @@ export default function LoteamentoMiragePage() {
           <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xl px-3 py-2 rounded-2xl ring-1 ring-white/20">
             <div className="relative size-10 overflow-hidden rounded-lg border border-white/40">
               <Image
-                src="/images/foto-corretora.jpeg"
+                src="/images/foto-corretora.jpg"
                 alt={PROPERTY_DETAILS.broker.name}
                 fill
                 className="object-cover"
@@ -219,7 +219,7 @@ export default function LoteamentoMiragePage() {
           <div className="mb-10 flex justify-center">
             <div className="relative size-32 md:size-40 overflow-hidden rounded-[2rem] border-2 border-white/10 shadow-2xl">
               <Image
-                src="/images/foto-corretora.jpeg"
+                src="/images/foto-corretora.jpg"
                 alt={PROPERTY_DETAILS.broker.name}
                 fill
                 className="object-cover"
