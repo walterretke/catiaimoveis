@@ -38,6 +38,7 @@ export default function LoteamentoMiragePage() {
           fill
           priority
           className="object-cover object-center scale-105"
+          sizes="100vw"
         />
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 md:bg-black/40" />
@@ -51,6 +52,7 @@ export default function LoteamentoMiragePage() {
                 alt={PROPERTY_DETAILS.broker.name}
                 fill
                 className="object-cover"
+                sizes="40px"
               />
             </div>
             <div className="flex flex-col">
@@ -190,6 +192,7 @@ export default function LoteamentoMiragePage() {
                     alt="Localização"
                     fill
                     className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                   />
                   <div className="absolute inset-0 bg-blue-900/10 mix-blend-multiply" />
                   
@@ -223,6 +226,7 @@ export default function LoteamentoMiragePage() {
                 alt={PROPERTY_DETAILS.broker.name}
                 fill
                 className="object-cover"
+                sizes="(max-width: 768px) 128px, 160px"
               />
             </div>
           </div>

@@ -57,7 +57,7 @@ export function PropertyGallery() {
         <div className="flex -space-x-4 mb-2">
            {[0, 1, 2, 3].map((i) => (
              <div key={i} className="relative size-16 md:size-20 rounded-2xl overflow-hidden border-4 border-white shadow-lg rotate-3 group-hover:rotate-0 transition-transform">
-               <Image src={IMAGES[i]} alt="Preview" fill className="object-cover" />
+               <Image src={IMAGES[i]} alt="Preview" fill className="object-cover" sizes="80px" />
              </div>
            ))}
         </div>
@@ -106,6 +106,7 @@ export function PropertyGallery() {
                 fill
                 className="object-contain"
                 priority
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1152px"
               />
             </div>
           </div>
@@ -126,7 +127,7 @@ export function PropertyGallery() {
                     currentIndex === index ? "border-blue-500 scale-110 opacity-100" : "border-transparent opacity-40 hover:opacity-100"
                   )}
                 >
-                  <Image src={img} alt="Thumb" fill className="object-cover" />
+                  <Image src={img} alt="Thumb" fill className="object-cover" sizes="80px" />
                 </button>
               ))}
             </div>

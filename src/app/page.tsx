@@ -15,6 +15,7 @@ import {
   Star
 } from "lucide-react";
 import { WHATSAPP_LINK_GENERAL, PROPERTY_DETAILS } from "@/lib/constants";
+import { TrackedWhatsAppLink } from "@/components/TrackedWhatsAppLink";
 
 // Custom Instagram SVG for consistency
 const InstagramIcon = ({ className }: { className?: string }) => (
@@ -37,28 +38,6 @@ const InstagramIcon = ({ className }: { className?: string }) => (
 );
 
 export default function BrokerHomePage() {
-  const handleWhatsAppClick = () => {
-    const eventId = crypto.randomUUID();
-    const currentUrl = window.location.href;
-    const userAgent = navigator.userAgent;
-
-    if (typeof window !== "undefined" && (window as any).fbq) {
-      (window as any).fbq('track', 'Lead', {}, { eventID: eventId });
-    }
-
-    fetch('/api/meta', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        event_id: eventId,
-        event_url: currentUrl,
-        client_user_agent: userAgent
-      })
-    }).catch(console.error);
-  };
-
   return (
     <main className="flex min-h-screen flex-col bg-white overflow-x-hidden antialiased">
       {/* 1. Hero Section - Refined for PC */}
@@ -70,6 +49,7 @@ export default function BrokerHomePage() {
             fill
             className="object-cover opacity-20 scale-105"
             priority
+            sizes="100vw"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-slate-950/80 to-slate-950" />
         </div>
@@ -88,6 +68,7 @@ export default function BrokerHomePage() {
                 alt="Cátia Manske"
                 fill
                 className="object-cover"
+                sizes="(max-width: 768px) 160px, 192px"
               />
             </div>
           </div>
@@ -101,14 +82,13 @@ export default function BrokerHomePage() {
           </p>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-            <a 
+            <TrackedWhatsAppLink 
               href={WHATSAPP_LINK_GENERAL}
-              onClick={handleWhatsAppClick}
               className="w-full md:w-auto flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#128C7E] text-white px-8 py-5 rounded-xl font-black uppercase tracking-widest transition-all shadow-lg text-sm"
             >
               <MessageCircle className="size-5" />
               Falar pelo WhatsApp
-            </a>
+            </TrackedWhatsAppLink>
             <a 
               href="https://www.instagram.com/corretoracatiamanske"
               target="_blank"
@@ -220,6 +200,7 @@ export default function BrokerHomePage() {
                 alt="Loteamento Mirage" 
                 fill 
                 className="object-cover transition-transform duration-700 group-hover:scale-105" 
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 to-transparent" />
               <div className="absolute inset-0 flex items-center p-10 md:p-16">
@@ -278,13 +259,12 @@ export default function BrokerHomePage() {
 
       {/* Floating CTA */}
       <div className="fixed bottom-6 right-6 z-50">
-        <a 
+        <TrackedWhatsAppLink 
           href={WHATSAPP_LINK_GENERAL}
-          onClick={handleWhatsAppClick}
           className="flex h-14 w-14 items-center justify-center bg-[#25D366] text-white rounded-xl shadow-2xl hover:scale-110 active:scale-95 transition-all"
         >
           <MessageCircle className="size-7" />
-        </a>
+        </TrackedWhatsAppLink>
       </div>
     </main>
   );

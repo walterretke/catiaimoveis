@@ -15,6 +15,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const realIp = request.headers.get("x-real-ip");
+    const clientIp = forwardedFor
+      ? forwardedFor.split(",")[0].trim()
+      : realIp || "0.0.0.0";
+
     const payload = {
       data: [
         {
@@ -25,6 +31,7 @@ export async function POST(request: Request) {
           event_source_url: event_url,
           user_data: {
             client_user_agent: client_user_agent,
+            client_ip_address: clientIp,
           },
         },
       ],
