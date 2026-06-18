@@ -1,3 +1,5 @@
+"use client";
+
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WHATSAPP_LINK } from "@/lib/constants";
@@ -18,6 +20,28 @@ export function WhatsAppButton({
   size = "lg",
   isSticky = false,
 }: WhatsAppButtonProps) {
+  const handleClick = () => {
+    const eventId = crypto.randomUUID();
+    const currentUrl = window.location.href;
+    const userAgent = navigator.userAgent;
+
+    if (typeof window !== "undefined" && (window as any).fbq) {
+      (window as any).fbq('track', 'Lead', {}, { eventID: eventId });
+    }
+
+    fetch('/api/meta', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event_id: eventId,
+        event_url: currentUrl,
+        client_user_agent: userAgent
+      })
+    }).catch(console.error);
+  };
+
   const buttonContent = (
     <>
       <MessageCircle className={cn(isSticky ? "size-5" : "size-6")} />
@@ -39,7 +63,7 @@ export function WhatsAppButton({
             className
           )}
         >
-          <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+          <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" onClick={handleClick}>
             {buttonContent}
           </a>
         </Button>
@@ -58,7 +82,7 @@ export function WhatsAppButton({
         className
       )}
     >
-      <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+      <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" onClick={handleClick}>
         {buttonContent}
       </a>
     </Button>

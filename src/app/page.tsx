@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { 
@@ -35,6 +37,28 @@ const InstagramIcon = ({ className }: { className?: string }) => (
 );
 
 export default function BrokerHomePage() {
+  const handleWhatsAppClick = () => {
+    const eventId = crypto.randomUUID();
+    const currentUrl = window.location.href;
+    const userAgent = navigator.userAgent;
+
+    if (typeof window !== "undefined" && (window as any).fbq) {
+      (window as any).fbq('track', 'Lead', {}, { eventID: eventId });
+    }
+
+    fetch('/api/meta', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event_id: eventId,
+        event_url: currentUrl,
+        client_user_agent: userAgent
+      })
+    }).catch(console.error);
+  };
+
   return (
     <main className="flex min-h-screen flex-col bg-white overflow-x-hidden antialiased">
       {/* 1. Hero Section - Refined for PC */}
@@ -79,6 +103,7 @@ export default function BrokerHomePage() {
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
             <a 
               href={WHATSAPP_LINK_GENERAL}
+              onClick={handleWhatsAppClick}
               className="w-full md:w-auto flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#128C7E] text-white px-8 py-5 rounded-xl font-black uppercase tracking-widest transition-all shadow-lg text-sm"
             >
               <MessageCircle className="size-5" />
@@ -255,6 +280,7 @@ export default function BrokerHomePage() {
       <div className="fixed bottom-6 right-6 z-50">
         <a 
           href={WHATSAPP_LINK_GENERAL}
+          onClick={handleWhatsAppClick}
           className="flex h-14 w-14 items-center justify-center bg-[#25D366] text-white rounded-xl shadow-2xl hover:scale-110 active:scale-95 transition-all"
         >
           <MessageCircle className="size-7" />
