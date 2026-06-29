@@ -16,7 +16,7 @@ interface WhatsAppButtonProps {
 
 export function WhatsAppButton({
   className,
-  text = "Falar com a Corretora",
+  text = "Agendar Visita ao Projeto",
   variant = "default",
   size = "lg",
   isSticky = false,

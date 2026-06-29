@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle, MapPin, Info, Sparkles, Star, Eye, Timer } from "lucide-react";
-import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { QualifyingForm } from "@/components/QualifyingForm";
 import { StickyWhatsAppButton } from "@/components/StickyWhatsAppButton";
 import { InteractiveImageCard } from "@/components/InteractiveImageCard";
 import { PropertyGallery } from "@/components/PropertyGallery";
@@ -97,20 +97,19 @@ export default function LoteamentoMiragePage() {
             </div>
           </div>
           
-          <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-12">
+          <div className="flex flex-col gap-6 md:gap-8">
             <div className="flex flex-col">
                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Investimento</span>
                <span className="text-5xl font-black text-white leading-none md:text-7xl tracking-tighter">
                  R$ 385.000
                </span>
+               <p className="text-[11px] text-[#64748b] mt-1 font-medium">
+                 *Entrada sugerida a partir de R$ 77.000
+               </p>
             </div>
             
             <div className="flex flex-col gap-3">
-              <WhatsAppButton className="w-full h-16 md:h-16 text-base rounded-xl md:w-[320px] font-black uppercase tracking-widest shadow-[0_20px_50px_rgba(37,211,102,0.3)]" />
-              <div className="inline-flex items-center justify-center md:justify-start gap-2 text-yellow-400 text-[10px] font-black uppercase tracking-widest">
-                <Info className="size-4 shrink-0" />
-                <span>PODE SER FINANCIADO PELO MINHA CASA MINHA VIDA</span>
-              </div>
+              <QualifyingForm />
             </div>
           </div>
         </div>

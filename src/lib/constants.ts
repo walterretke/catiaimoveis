@@ -1,6 +1,6 @@
 export const WHATSAPP_NUMBER = "5547996174283";
-export const WHATSAPP_MESSAGE = "Olá, Cátia! Gostaria de mais informações sobre o apartamento no Loteamento Mirage.";
-export const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+export const WHATSAPP_MESSAGE = "Olá Cátia, tenho interesse no Loteamento Mirage (R$ 385.000). Gostaria de agendar uma visita e fazer uma simulação de financiamento.";
+export const WHATSAPP_LINK = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
 export const WHATSAPP_MESSAGE_GENERAL = "Olá, Cátia! Estou procurando imóveis e gostaria do seu auxílio.";
 export const WHATSAPP_LINK_GENERAL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_GENERAL)}`;

@@ -37,6 +37,8 @@ export async function POST(request: Request) {
       ],
     };
 
+    console.log("Enviando para a Meta:", JSON.stringify(payload, null, 2));
+
     const url = `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${accessToken}`;
 
     const response = await fetch(url, {
