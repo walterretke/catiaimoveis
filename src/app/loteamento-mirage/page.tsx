@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle, MapPin, Info, Sparkles, Star, Eye, Timer } from "lucide-react";
+import dynamic from "next/dynamic";
 import { QualifyingForm } from "@/components/QualifyingForm";
-import { StickyWhatsAppButton } from "@/components/StickyWhatsAppButton";
-import { InteractiveImageCard } from "@/components/InteractiveImageCard";
-import { PropertyGallery } from "@/components/PropertyGallery";
+
+const StickyWhatsAppButton = dynamic(() => import("@/components/StickyWhatsAppButton").then((mod) => mod.StickyWhatsAppButton));
+const InteractiveImageCard = dynamic(() => import("@/components/InteractiveImageCard").then((mod) => mod.InteractiveImageCard));
+const PropertyGallery = dynamic(() => import("@/components/PropertyGallery").then((mod) => mod.PropertyGallery));
 import { PROPERTY_DETAILS } from "@/lib/constants";
 
 // Custom Instagram SVG for compatibility
@@ -51,6 +53,7 @@ export default function LoteamentoMiragePage() {
                 src="/images/foto-corretora.jpg"
                 alt={PROPERTY_DETAILS.broker.name}
                 fill
+                priority
                 className="object-cover"
                 sizes="40px"
               />
