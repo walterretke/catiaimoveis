@@ -17,7 +17,7 @@ export function QualifyingForm() {
       return;
     }
 
-    if (renda === "Abaixo de R$ 6.000" && entrada === "Não, preciso de 100% financiado") {
+    if (renda === "Abaixo de R$ 6.000" && entrada === "Não possuo entrada (100% financiado)") {
       setMensagemDesqualificada(true);
       return;
     }
@@ -31,7 +31,7 @@ export function QualifyingForm() {
     const currentUrl = window.location.href;
     const userAgent = navigator.userAgent;
 
-    const isQualifiedForPixel = (renda === "Entre R$ 6.000 e R$ 10.000" || renda === "Acima de R$ 10.000") && entrada === "Sim, tenho FGTS/Economias";
+    const isQualifiedForPixel = (renda === "Entre R$ 6.000 e R$ 10.000" || renda === "Acima de R$ 10.000") && entrada === "Sim, possuo os 20% necessários (FGTS/Economias)";
 
     if (isQualifiedForPixel) {
       // Dispara evento de Pixel e redireciona apenas para qualificados
@@ -84,8 +84,9 @@ export function QualifyingForm() {
             }}
           >
             <option value="" disabled>Selecione...</option>
-            <option value="Sim, tenho FGTS/Economias">Sim, tenho FGTS/Economias</option>
-            <option value="Não, preciso de 100% financiado">Não, preciso de 100% financiado</option>
+            <option value="Sim, possuo os 20% necessários (FGTS/Economias)">Sim, possuo os 20% necessários (FGTS/Economias)</option>
+            <option value="Tenho apenas uma parte do valor">Tenho apenas uma parte do valor</option>
+            <option value="Não possuo entrada (100% financiado)">Não possuo entrada (100% financiado)</option>
           </select>
         </div>
 
