@@ -56,6 +56,7 @@ export function GenericQualifyingForm({ imovelNome, imovelValor }: GenericQualif
           event_url: currentUrl,
           client_user_agent: userAgent,
         }),
+        keepalive: true,
       }).catch(console.error);
     }
 

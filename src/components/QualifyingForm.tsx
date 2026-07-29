@@ -47,6 +47,7 @@ export function QualifyingForm() {
           event_url: currentUrl,
           client_user_agent: userAgent,
         }),
+        keepalive: true,
       }).catch(console.error);
     }
 
