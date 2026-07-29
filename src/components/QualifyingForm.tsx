@@ -49,9 +49,14 @@ export function QualifyingForm() {
         }),
         keepalive: true,
       }).catch(console.error);
-    }
 
-    window.open(urlWa, "_blank");
+      // Aguarda 400ms para garantir que o disparo do Pixel e da API aconteçam antes do redirecionamento
+      setTimeout(() => {
+        window.location.href = urlWa;
+      }, 400);
+    } else {
+      window.location.href = urlWa;
+    }
   };
 
   return (
