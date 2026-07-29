@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { MessageCircle, CheckCircle2, Lock, ShieldCheck, Star } from "lucide-react";
+import { MessageCircle, CheckCircle2, Lock, ShieldCheck, ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { GenericQualifyingForm } from "@/components/GenericQualifyingForm";
 import { PROPERTY_DETAILS } from "@/lib/constants";
@@ -27,60 +27,81 @@ export default async function GenericHomePage({ searchParams }: PageProps) {
     : undefined;
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#F3F4F6] overflow-x-hidden antialiased">
-      {/* 1. Hero Section - Best Practices Applied: Focused, Conversational, Mobile-First */}
-      <section className="relative flex flex-col justify-center items-center w-full min-h-[100vh] px-4 md:px-6 py-12 md:py-20 bg-[url('/images/pattern.svg')] bg-repeat bg-opacity-50">
+    <main className="flex min-h-screen flex-col bg-[#FAFAFA] overflow-x-hidden antialiased selection:bg-blue-100">
+      
+      {/* Subtle Immersive Background (Bright & Clean) */}
+      <div className="fixed inset-0 z-0">
+        <Image
+          src="/images/Fachada.JPG"
+          alt="Background"
+          fill
+          priority
+          className="object-cover scale-105 opacity-20"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-2xl" />
+      </div>
+
+      {/* Hero Section */}
+      <section className="relative z-10 flex flex-col justify-center items-center w-full min-h-[100vh] px-4 py-12 md:py-16">
         
-        <div className="relative z-10 w-full max-w-lg mx-auto flex flex-col items-center justify-center text-center mt-2 md:mt-0">
+        <div className="w-full max-w-[500px] mx-auto flex flex-col items-center">
           
-          {/* WhatsApp Connection Indicator - Reduced friction visually */}
-          <div className="flex flex-col items-center mb-6 w-full px-4">
-            <div className="relative flex items-center justify-center size-16 md:size-20 bg-[#25D366] rounded-full shadow-[0_0_30px_rgba(37,211,102,0.3)] mb-4 animate-bounce-slow">
-              <MessageCircle className="size-8 md:size-10 text-white" />
-              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-sm">
-                <CheckCircle2 className="size-4 md:size-5 text-[#25D366]" />
-              </div>
+          {/* Header - Broker Identity */}
+          <div className="flex flex-col items-center mb-6 z-20 translate-y-6">
+            <div className="relative size-20 md:size-24 rounded-full overflow-hidden border-4 border-white shadow-xl">
+               <Image src="/images/foto-corretora.jpg" alt={PROPERTY_DETAILS.broker.name} fill className="object-cover" />
+               <div className="absolute inset-0 ring-1 ring-black/10 rounded-full"></div>
             </div>
-            
-            <h1 className="text-2xl md:text-3xl font-black leading-[1.1] text-slate-800 tracking-tight mb-2">
-              Quase lá! Falta só 1 passo.
-            </h1>
-            <p className="text-sm text-slate-500 font-medium max-w-xs">
-              Conexão segura com o WhatsApp de {PROPERTY_DETAILS.broker.name}.
-            </p>
+            <div className="bg-white px-4 py-1.5 rounded-full shadow-sm border border-slate-100 flex items-center gap-2 mt-[-10px] z-10">
+              <ShieldCheck className="size-3.5 text-blue-600" />
+              <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{PROPERTY_DETAILS.broker.name}</span>
+            </div>
           </div>
 
-          {/* Conversational UI - Simulates chat */}
-          <div className="bg-white p-4 rounded-[1.5rem] rounded-tl-none shadow-sm border border-slate-200 text-left mb-6 w-full max-w-sm relative self-start ml-2 md:ml-0 mt-4">
-             <div className="absolute -top-6 -left-2 size-8 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                <Image src="/images/foto-corretora.jpg" alt="Corretora" fill className="object-cover" />
-             </div>
-             <p className="text-sm md:text-base text-slate-700 font-medium leading-relaxed">
-               "Olá! Vi que você tem interesse no <strong>{imovelName}</strong>
-               {imovelValor ? ` (R$ ${imovelValor})` : ""}. Para eu te passar todas as informações e as melhores condições de forma rápida, responda só essas duas perguntinhas abaixo:"
-             </p>
+          {/* Clean Elegant Card */}
+          <div className="w-full bg-white rounded-[2rem] p-6 md:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-slate-100 relative">
+            
+            {/* Title & Context */}
+            <div className="text-center mb-8 pt-4">
+              <h1 className="text-2xl md:text-[28px] font-bold tracking-tight text-slate-900 mb-3">
+                Atendimento Exclusivo
+              </h1>
+              
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left relative">
+                 {/* Small triangle for chat bubble effect */}
+                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-slate-50 border-t border-l border-slate-100 rotate-45"></div>
+                 <p className="text-slate-600 text-[14px] md:text-[15px] leading-relaxed relative z-10">
+                   "Olá! Estou pronta para te passar todas as informações do <strong>{imovelName}</strong>
+                   {imovelValor ? ` (R$ ${imovelValor})` : ""}. Responda rápido as duas perguntas abaixo para liberar nosso contato no WhatsApp."
+                 </p>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div className="w-full">
+              <GenericQualifyingForm 
+                imovelNome={imovelName !== "seu próximo imóvel" ? imovelName : undefined}
+                imovelValor={imovelValor}
+              />
+            </div>
+            
           </div>
           
-          <div className="w-full">
-            <GenericQualifyingForm 
-              imovelNome={imovelName !== "seu próximo imóvel" ? imovelName : undefined}
-              imovelValor={imovelValor}
-            />
-          </div>
-          
-          {/* Social Proof & Trust Badges (Best Practices) */}
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 w-full">
-             <div className="flex items-center gap-2 text-xs md:text-sm text-slate-500 font-semibold bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100">
-               <ShieldCheck className="size-4 text-[#25D366]" /> CRECI {PROPERTY_DETAILS.broker.creci || "66755-F"}
+          {/* Trust Elements */}
+          <div className="mt-8 flex items-center justify-center gap-4 w-full text-slate-400">
+             <div className="flex items-center gap-1.5 text-[11px] font-medium">
+               <Lock className="size-3.5" /> Suas informações estão seguras
              </div>
-             <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-2">
-               <Lock className="size-3" /> Respostas 100% confidenciais
+             <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+             <div className="flex items-center gap-1.5 text-[11px] font-medium">
+               CRECI {PROPERTY_DETAILS.broker.creci || "66755-F"}
              </div>
           </div>
+
         </div>
       </section>
 
-      {/* Fixed UI Elements */}
       <StickyWhatsAppButton />
     </main>
   );
