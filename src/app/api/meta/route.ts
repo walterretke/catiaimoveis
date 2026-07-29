@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { event_id, event_url, client_user_agent } = body;
+    const { event_id, event_url, client_user_agent, event_name = "Lead" } = body;
 
     const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
     const accessToken = process.env.META_ACCESS_TOKEN;
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const payload = {
       data: [
         {
-          event_name: "Lead",
+          event_name: event_name,
           event_time: Math.floor(Date.now() / 1000),
           action_source: "website",
           event_id: event_id,
