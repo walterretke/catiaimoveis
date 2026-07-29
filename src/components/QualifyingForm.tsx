@@ -31,7 +31,7 @@ export function QualifyingForm() {
     const currentUrl = window.location.href;
     const userAgent = navigator.userAgent;
 
-    const isQualifiedForPixel = (renda === "Entre R$ 6.000 e R$ 10.000" || renda === "Acima de R$ 10.000") && entrada === "Sim, possuo os 20% necessários (FGTS/Economias)";
+    const isQualifiedForPixel = entrada !== "Não possuo entrada (100% financiado)";
 
     if (isQualifiedForPixel) {
       // Dispara evento de Pixel e redireciona apenas para qualificados
