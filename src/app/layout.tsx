@@ -33,7 +33,7 @@ export default function RootLayout({
     >
       <head>
         <link rel="preconnect" href="https://connect.facebook.net" />
-        <Script id="meta-pixel" strategy="lazyOnload">
+        <Script id="meta-pixel" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
