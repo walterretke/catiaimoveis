@@ -69,16 +69,15 @@ export default async function GenericHomePage({ searchParams }: PageProps) {
               </h1>
               
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left relative">
-                 {/* Small triangle for chat bubble effect */}
                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-slate-50 border-t border-l border-slate-100 rotate-45"></div>
                  <p className="text-slate-600 text-[14px] md:text-[15px] leading-relaxed relative z-10">
                    "Olá! Estou pronta para te passar todas as informações do <strong>{imovelName}</strong>
-                   {imovelValor ? ` (R$ ${imovelValor})` : ""}. Responda rápido as duas perguntas abaixo para liberar nosso contato no WhatsApp."
+                   {imovelValor ? ` (R$ ${imovelValor})` : ""}. Clique abaixo para falar comigo diretamente no WhatsApp."
                  </p>
               </div>
             </div>
 
-            {/* Form */}
+            {/* Botão WhatsApp (abre enquete ao clicar) */}
             <div className="w-full">
               <GenericQualifyingForm 
                 imovelNome={imovelName !== "seu próximo imóvel" ? imovelName : undefined}

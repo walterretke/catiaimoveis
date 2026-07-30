@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MessageCircle, CheckCircle2, X } from "lucide-react";
 
 interface GenericQualifyingFormProps {
   imovelNome?: string;
@@ -10,41 +9,33 @@ interface GenericQualifyingFormProps {
 }
 
 export function GenericQualifyingForm({ imovelNome, imovelValor }: GenericQualifyingFormProps) {
-  const [renda, setRenda] = useState("");
-  const [entrada, setEntrada] = useState("");
-  const [mensagemDesqualificada, setMensagemDesqualificada] = useState(false);
+  const [showPoll, setShowPoll] = useState(false);
 
-  const handleWhatsAppClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-
-    if (!renda || !entrada) {
-      alert("Por favor, preencha as duas opções para ver as condições.");
-      return;
-    }
-
-    if (renda === "Abaixo de R$ 6.000" && entrada === "Não possuo entrada (100% financiado)") {
-      setMensagemDesqualificada(true);
-      return;
-    }
-
-    setMensagemDesqualificada(false);
-
+  const whatsappUrl = (entrada: string) => {
     const nomeMensagem = imovelNome || "seu próximo imóvel";
     const valorMensagem = imovelValor ? ` (R$ ${imovelValor})` : "";
-    
-    const mensagem = `Olá Cátia! Tenho interesse no ${nomeMensagem}${valorMensagem}. Minha renda familiar é ${renda} e sobre a entrada: ${entrada}. Gostaria de mais informações.`;
-    const urlWa = `https://api.whatsapp.com/send?phone=5547996174283&text=${encodeURIComponent(mensagem)}`;
+    const mensagem = `Olá Cátia! Tenho interesse no ${nomeMensagem}${valorMensagem}. Sobre a entrada: ${entrada}. Gostaria de mais informações.`;
+    return `https://api.whatsapp.com/send?phone=5547996174283&text=${encodeURIComponent(mensagem)}`;
+  };
 
+  const firePixelAndRedirect = (entrada: string) => {
     const eventId = crypto.randomUUID();
     const currentUrl = window.location.href;
     const userAgent = navigator.userAgent;
+    const urlWa = whatsappUrl(entrada);
 
     const isQualifiedForPixel = entrada !== "Não possuo entrada (100% financiado)";
 
+    console.log("[PIXEL DEBUG] entrada:", entrada);
+    console.log("[PIXEL DEBUG] qualificado:", isQualifiedForPixel);
+    console.log("[PIXEL DEBUG] fbq:", typeof (window as any).fbq);
+
     if (isQualifiedForPixel) {
-      // Dispara evento de Pixel e redireciona apenas para qualificados
       if ((window as any).fbq) {
         (window as any).fbq("track", "Lead", {}, { eventID: eventId });
+        console.log("[PIXEL DEBUG] ✅ fbq Lead disparado:", eventId);
+      } else {
+        console.error("[PIXEL DEBUG] ❌ fbq não encontrado");
       }
 
       fetch("/api/meta", {
@@ -57,83 +48,107 @@ export function GenericQualifyingForm({ imovelNome, imovelValor }: GenericQualif
           client_user_agent: userAgent,
         }),
         keepalive: true,
-      }).catch(console.error);
+      })
+        .then((res) => res.json())
+        .then((data) => console.log("[PIXEL DEBUG] ✅ API:", data))
+        .catch((err) => console.error("[PIXEL DEBUG] ❌ API:", err));
 
-      // Aguarda 400ms para garantir que o disparo do Pixel e da API aconteçam antes do redirecionamento
       setTimeout(() => {
         window.location.href = urlWa;
-      }, 400);
+      }, 500);
     } else {
       window.location.href = urlWa;
     }
   };
 
   return (
-    <div className="flex flex-col w-full mx-auto">
-      <div id="qualifying-form" className="flex flex-col gap-5 w-full">
-        
-        <div className="relative z-10 flex flex-col gap-2 text-left">
-          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Renda Familiar Aproximada</label>
-          <div className="relative">
-            <select 
-              className="h-14 w-full px-4 rounded-xl bg-white text-slate-900 text-sm md:text-base font-medium border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm appearance-none cursor-pointer"
-              value={renda}
-              onChange={(e) => {
-                setRenda(e.target.value);
-                setMensagemDesqualificada(false);
-              }}
+    <>
+      {/* Botão principal do WhatsApp */}
+      <button
+        onClick={() => setShowPoll(true)}
+        className="w-full h-[60px] bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl text-[15px] font-black shadow-lg shadow-green-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] flex items-center justify-center gap-3 uppercase tracking-widest"
+      >
+        <MessageCircle className="size-6" />
+        Conectar WhatsApp
+      </button>
+
+      {/* Modal de Enquete */}
+      {showPoll && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowPoll(false)}
+          />
+
+          {/* Card da Enquete */}
+          <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 md:p-8 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            {/* Botão Fechar */}
+            <button
+              onClick={() => setShowPoll(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-600"
             >
-              <option value="" disabled>Selecione sua renda...</option>
-              <option value="Abaixo de R$ 6.000">Abaixo de R$ 6.000</option>
-              <option value="Entre R$ 6.000 e R$ 10.000">Entre R$ 6.000 e R$ 10.000</option>
-              <option value="Acima de R$ 10.000">Acima de R$ 10.000</option>
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <X className="size-5" />
+            </button>
+
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center size-12 bg-[#25D366]/10 rounded-2xl mb-3">
+                <MessageCircle className="size-6 text-[#25D366]" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">
+                Só mais uma coisa...
+              </h3>
+              <p className="text-sm text-slate-500">
+                Você possui valor para entrada?
+              </p>
             </div>
-          </div>
-        </div>
 
-        <div className="relative z-10 flex flex-col gap-2 text-left mt-2">
-          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Valor para Entrada</label>
-          <div className="relative">
-            <select 
-              className="h-14 w-full px-4 rounded-xl bg-white text-slate-900 text-sm md:text-base font-medium border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm appearance-none cursor-pointer"
-              value={entrada}
-              onChange={(e) => {
-                setEntrada(e.target.value);
-                setMensagemDesqualificada(false);
-              }}
-            >
-              <option value="" disabled>Selecione uma opção...</option>
-              <option value="Sim, possuo os 20% necessários (FGTS/Economias)">Sim, possuo os 20% (FGTS/Economias)</option>
-              <option value="Tenho apenas uma parte do valor">Tenho apenas uma parte do valor</option>
-              <option value="Não possuo entrada (100% financiado)">Não possuo entrada (100% financiado)</option>
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            {/* Opções estilo enquete */}
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => firePixelAndRedirect("Sim, possuo os 20% necessários (FGTS/Economias)")}
+                className="w-full text-left px-5 py-4 rounded-2xl border-2 border-slate-200 hover:border-[#25D366] hover:bg-[#25D366]/5 transition-all group flex items-center gap-3"
+              >
+                <div className="size-5 rounded-full border-2 border-slate-300 group-hover:border-[#25D366] group-hover:bg-[#25D366] flex items-center justify-center transition-all shrink-0">
+                  <CheckCircle2 className="size-3 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">
+                  Sim, possuo os 20% (FGTS/Economias)
+                </span>
+              </button>
+
+              <button
+                onClick={() => firePixelAndRedirect("Tenho apenas uma parte do valor")}
+                className="w-full text-left px-5 py-4 rounded-2xl border-2 border-slate-200 hover:border-[#25D366] hover:bg-[#25D366]/5 transition-all group flex items-center gap-3"
+              >
+                <div className="size-5 rounded-full border-2 border-slate-300 group-hover:border-[#25D366] group-hover:bg-[#25D366] flex items-center justify-center transition-all shrink-0">
+                  <CheckCircle2 className="size-3 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">
+                  Tenho apenas uma parte do valor
+                </span>
+              </button>
+
+              <button
+                onClick={() => firePixelAndRedirect("Não possuo entrada (100% financiado)")}
+                className="w-full text-left px-5 py-4 rounded-2xl border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all group flex items-center gap-3"
+              >
+                <div className="size-5 rounded-full border-2 border-slate-300 group-hover:border-slate-400 flex items-center justify-center transition-all shrink-0">
+                  <CheckCircle2 className="size-3 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">
+                  Não possuo entrada (100% financiado)
+                </span>
+              </button>
             </div>
+
+            <p className="text-[11px] text-slate-400 text-center mt-5">
+              Ao selecionar, você será direcionado ao WhatsApp.
+            </p>
           </div>
-        </div>
-
-        <Button
-          onClick={handleWhatsAppClick}
-          size="lg"
-          className="relative z-10 w-full h-[60px] mt-4 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl text-[15px] font-black shadow-lg shadow-green-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] gap-3 uppercase tracking-widest overflow-hidden"
-        >
-          <MessageCircle className="size-6 relative z-10" />
-          <span className="relative z-10">Conectar WhatsApp</span>
-        </Button>
-      </div>
-
-      {mensagemDesqualificada && (
-        <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-xl w-full flex items-start gap-4 text-slate-800 shadow-sm animate-in fade-in slide-in-from-top-4 text-left">
-          <AlertCircle className="size-6 text-red-500 shrink-0 mt-0.5" />
-          <p className="text-xs md:text-sm font-medium leading-relaxed">
-            As condições para este imóvel exigem uma composição de renda maior ou entrada em dinheiro. Converse com a corretora para analisar alternativas.
-          </p>
         </div>
       )}
-    </div>
+    </>
   );
 }
