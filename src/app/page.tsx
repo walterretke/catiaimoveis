@@ -190,9 +190,9 @@ export default function BrokerHomePage() {
         </div>
       </section>
 
-      {/* 4. Featured Project Link */}
+      {/* 4. Featured Project Links */}
       <section className="py-20 px-6">
-        <div className="container mx-auto max-w-6xl">
+        <div className="container mx-auto max-w-6xl space-y-8">
           <Link href="/loteamento-mirage" className="block relative group">
             <div className="relative h-[350px] md:h-[450px] w-full overflow-hidden rounded-[2.5rem] shadow-2xl">
               <Image 
@@ -208,6 +208,29 @@ export default function BrokerHomePage() {
                   <span className="inline-block bg-blue-600 px-3 py-1 rounded-sm text-[8px] font-black uppercase tracking-widest mb-4">Destaque do Mês</span>
                   <h3 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 leading-none">Loteamento <br /> Mirage</h3>
                   <p className="text-base text-slate-300 font-medium mb-8">Últimas unidades com condições especiais em Três Rios do Norte.</p>
+                  <div className="inline-flex items-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-xl font-black uppercase text-xs">
+                    Ver detalhes <ArrowRight className="size-4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/mobiliado-baependi" className="block relative group">
+            <div className="relative h-[350px] md:h-[450px] w-full overflow-hidden rounded-[2.5rem] shadow-2xl">
+              <Image 
+                src="/images/100mobiliado-album/principal.jpg" 
+                alt="Apartamento Mobiliado Baependi" 
+                fill 
+                className="object-cover transition-transform duration-700 group-hover:scale-105" 
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 to-transparent" />
+              <div className="absolute inset-0 flex items-center p-10 md:p-16">
+                <div className="max-w-md text-white">
+                  <span className="inline-block bg-amber-600 px-3 py-1 rounded-sm text-[8px] font-black uppercase tracking-widest mb-4">100% Mobiliado</span>
+                  <h3 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 leading-none">Mobiliado <br /> Baependi</h3>
+                  <p className="text-base text-slate-300 font-medium mb-8">De R$ 368.000 por R$ 348.000. Só trazer as malas! Aceita financiamento.</p>
                   <div className="inline-flex items-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-xl font-black uppercase text-xs">
                     Ver detalhes <ArrowRight className="size-4" />
                   </div>
@@ -239,6 +262,7 @@ export default function BrokerHomePage() {
                   <nav className="flex flex-col gap-3">
                      <Link href="/" className="text-sm font-bold hover:text-blue-400 transition-colors">Início</Link>
                      <Link href="/loteamento-mirage" className="text-sm font-bold hover:text-blue-400 transition-colors">Loteamento Mirage</Link>
+                     <Link href="/mobiliado-baependi" className="text-sm font-bold hover:text-blue-400 transition-colors">Mobiliado Baependi</Link>
                      <Link href="/privacidade" className="text-sm font-bold hover:text-blue-400 transition-colors">Privacidade</Link>
                   </nav>
                </div>
