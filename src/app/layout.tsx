@@ -33,6 +33,8 @@ export default function RootLayout({
     >
       <head>
         <link rel="preconnect" href="https://connect.facebook.net" />
+      </head>
+      <body className="min-h-full flex flex-col">
         <Script id="meta-pixel" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
@@ -47,8 +49,6 @@ export default function RootLayout({
             fbq('track', 'PageView');
           `}
         </Script>
-      </head>
-      <body className="min-h-full flex flex-col">
         <noscript>
           <img 
             height="1" 
