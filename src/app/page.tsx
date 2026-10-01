@@ -238,6 +238,29 @@ export default function BrokerHomePage() {
               </div>
             </div>
           </Link>
+
+          <Link href="/geminado-tresrios" className="block relative group">
+            <div className="relative h-[350px] md:h-[450px] w-full overflow-hidden rounded-[2.5rem] shadow-2xl">
+              <Image 
+                src="/images/GEMINADO_ALTO_PADRAO_TRESRIOS/QUINTAL_2.jpg" 
+                alt="Geminado Alto Padrão" 
+                fill 
+                className="object-cover transition-transform duration-700 group-hover:scale-105" 
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 to-transparent" />
+              <div className="absolute inset-0 flex items-center p-10 md:p-16">
+                <div className="max-w-md text-white">
+                  <span className="inline-block bg-emerald-600 px-3 py-1 rounded-sm text-[8px] font-black uppercase tracking-widest mb-4">Lançamento</span>
+                  <h3 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 leading-none">Geminado <br /> Alto Padrão</h3>
+                  <p className="text-base text-slate-300 font-medium mb-8">91m² com suíte, área gourmet e acabamento premium. R$ 460 mil.</p>
+                  <div className="inline-flex items-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-xl font-black uppercase text-xs">
+                    Ver detalhes <ArrowRight className="size-4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
         </div>
       </section>
 
@@ -263,6 +286,7 @@ export default function BrokerHomePage() {
                      <Link href="/" className="text-sm font-bold hover:text-blue-400 transition-colors">Início</Link>
                      <Link href="/loteamento-mirage" className="text-sm font-bold hover:text-blue-400 transition-colors">Loteamento Mirage</Link>
                      <Link href="/mobiliado-baependi" className="text-sm font-bold hover:text-blue-400 transition-colors">Mobiliado Baependi</Link>
+                     <Link href="/geminado-tresrios" className="text-sm font-bold hover:text-blue-400 transition-colors">Geminado Três Rios</Link>
                      <Link href="/privacidade" className="text-sm font-bold hover:text-blue-400 transition-colors">Privacidade</Link>
                   </nav>
                </div>
