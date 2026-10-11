@@ -1,70 +1,89 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function POST(request: Request) {
+// API de Conversões do Meta (lado servidor). Recebe o mesmo event_id do Pixel
+// para o Meta deduplicar. Só aceita "Lead" — a decisão de QUANDO disparar
+// fica em `src/lib/lead.ts`.
+
+const GRAPH_VERSION = process.env.META_GRAPH_VERSION || "v24.0";
+const ENTRADAS = new Set(["completa", "parcial"]);
+
+function str(value: unknown, max: number): string | undefined {
+  return typeof value === "string" && value.length > 0 && value.length <= max ? value : undefined;
+}
+
+export async function POST(request: NextRequest) {
+  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+  const accessToken = process.env.META_ACCESS_TOKEN;
+  if (!pixelId || !accessToken) {
+    return NextResponse.json({ error: "Missing Meta credentials" }, { status: 500 });
+  }
+
+  let body: Record<string, unknown>;
   try {
-    const body = await request.json();
-    const { event_id, event_url, client_user_agent, event_name = "Lead" } = body;
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-    const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
-    const accessToken = process.env.META_ACCESS_TOKEN;
+  const eventId = str(body.event_id, 100);
+  const eventUrl = str(body.event_url, 2000);
+  if (body.event_name !== "Lead" || !eventId || !eventUrl?.startsWith("http")) {
+    return NextResponse.json({ error: "Invalid event" }, { status: 400 });
+  }
 
-    if (!pixelId || !accessToken) {
-      return NextResponse.json(
-        { error: "Missing Meta credentials" },
-        { status: 500 }
-      );
-    }
+  const custom = (body.custom_data ?? {}) as Record<string, unknown>;
+  const entrada = str(custom.entrada, 20);
+  const contentName = str(custom.content_name, 120);
 
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const realIp = request.headers.get("x-real-ip");
-    const clientIp = forwardedFor
-      ? forwardedFor.split(",")[0].trim()
-      : realIp || "0.0.0.0";
+  const clientIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+    request.headers.get("x-real-ip") ||
+    undefined;
 
-    const payload = {
-      data: [
-        {
-          event_name: event_name,
-          event_time: Math.floor(Date.now() / 1000),
-          action_source: "website",
-          event_id: event_id,
-          event_source_url: event_url,
-          user_data: {
-            client_user_agent: client_user_agent,
-            client_ip_address: clientIp,
-          },
-        },
-      ],
-    };
+  const event = {
+    event_name: "Lead",
+    event_time: Math.floor(Date.now() / 1000),
+    action_source: "website",
+    event_id: eventId,
+    event_source_url: eventUrl,
+    user_data: {
+      client_user_agent:
+        str(body.client_user_agent, 1000) ?? request.headers.get("user-agent") ?? undefined,
+      client_ip_address: clientIp,
+      // Cookies do Pixel (mesma origem, chegam junto no fetch): melhoram a
+      // correspondência do evento com quem clicou no anúncio.
+      fbp: request.cookies.get("_fbp")?.value,
+      fbc: request.cookies.get("_fbc")?.value,
+    },
+    custom_data: {
+      ...(contentName && { content_name: contentName }),
+      ...(entrada && ENTRADAS.has(entrada) && { entrada }),
+    },
+  };
 
-    console.log("Enviando para a Meta:", JSON.stringify(payload, null, 2));
+  const payload = {
+    data: [event],
+    ...(process.env.META_TEST_EVENT_CODE && { test_event_code: process.env.META_TEST_EVENT_CODE }),
+  };
 
-    const url = `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${accessToken}`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/${pixelId}/events?access_token=${accessToken}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
-
+    );
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Meta Conversions API Error:", data);
-      return NextResponse.json(
-        { error: "Failed to send event to Meta" },
-        { status: response.status }
-      );
+      console.error("Meta Conversions API error:", data);
+      return NextResponse.json({ error: "Failed to send event to Meta" }, { status: 502 });
     }
-
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, events_received: data.events_received });
   } catch (error) {
-    console.error("Error processing Meta event:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Error sending Meta event:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
