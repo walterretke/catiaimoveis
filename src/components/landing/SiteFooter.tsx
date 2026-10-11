@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { CORRETORA } from "@/content/site";
-import { IMOVEIS } from "@/content/imoveis";
+import type { Imovel } from "@/content/imoveis";
 import { InstagramIcon } from "@/components/icons";
 
-export function SiteFooter() {
+export function SiteFooter({ imoveis }: { imoveis: Imovel[] }) {
   return (
     <footer className="bg-ink px-4 pt-14 pb-28 text-white/80 md:pb-14">
       <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1.5fr_1fr_1fr]">
@@ -23,7 +23,7 @@ export function SiteFooter() {
         <nav aria-label="Imóveis">
           <p className="mb-4 text-xs font-semibold tracking-widest text-white/50 uppercase">Imóveis</p>
           <ul className="space-y-2.5 text-sm">
-            {IMOVEIS.map((i) => (
+            {imoveis.map((i) => (
               <li key={i.slug}>
                 <Link href={`/${i.slug}`} className="transition hover:text-white">
                   {i.titulo.join(" ")}

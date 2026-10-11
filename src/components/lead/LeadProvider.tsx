@@ -5,9 +5,10 @@ import { Dialog } from "radix-ui";
 import { Check, Loader2, X } from "lucide-react";
 import { CORRETORA } from "@/content/site";
 import {
-  ENTRADA_OPCOES,
   buildLeadMessage,
   buildWhatsAppUrl,
+  entradaOpcoes,
+  trackAbriuEnquete,
   trackEntrada,
   type EntradaOpcao,
 } from "@/lib/lead";
@@ -43,12 +44,15 @@ interface LeadProviderProps {
   assunto?: string;
   /** Identifica a página no evento (content_name). */
   contentName: string;
+  /** Entrada mínima do imóvel em R$. Com ela as opções mostram faixas de valor. */
+  entradaMinima?: number;
   children: React.ReactNode;
 }
 
-export function LeadProvider({ assunto, contentName, children }: LeadProviderProps) {
+export function LeadProvider({ assunto, contentName, entradaMinima, children }: LeadProviderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState<EntradaOpcao | null>(null);
+  const opcoes = entradaOpcoes(entradaMinima);
 
   // Ao voltar do WhatsApp com o botão "voltar", o navegador pode restaurar a
   // página do cache com o modal travado em "Abrindo WhatsApp…". Reseta.
@@ -66,7 +70,8 @@ export function LeadProvider({ assunto, contentName, children }: LeadProviderPro
   const open = useCallback(() => {
     setSelected(null);
     setIsOpen(true);
-  }, []);
+    trackAbriuEnquete(contentName, window.fbq);
+  }, [contentName]);
 
   const choose = (opcao: EntradaOpcao) => {
     if (selected) return;
@@ -140,13 +145,15 @@ export function LeadProvider({ assunto, contentName, children }: LeadProviderPro
                 <Dialog.Description className="text-sm text-muted">
                   {selected
                     ? "Sua conversa com a Cátia já vai começar."
-                    : "Você possui valor para entrada?"}
+                    : entradaMinima
+                      ? "Quanto você tem para dar de entrada?"
+                      : "Você possui valor para entrada?"}
                 </Dialog.Description>
               </div>
             </div>
 
             <div className="flex flex-col gap-2.5" role="list">
-              {ENTRADA_OPCOES.map((opcao) => {
+              {opcoes.map((opcao) => {
                 const isSelected = selected?.id === opcao.id;
                 return (
                   <button
@@ -172,7 +179,12 @@ export function LeadProvider({ assunto, contentName, children }: LeadProviderPro
                     >
                       {isSelected && <Check className="size-3" strokeWidth={3} />}
                     </span>
-                    <span className="flex-1">{opcao.label}</span>
+                    <span className="flex-1">
+                      {opcao.label}
+                      {opcao.detalhe && (
+                        <span className="block text-xs font-normal text-muted">{opcao.detalhe}</span>
+                      )}
+                    </span>
                     {isSelected && <Loader2 className="size-4 animate-spin" />}
                   </button>
                 );

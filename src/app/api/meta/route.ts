@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // API de Conversões do Meta (lado servidor). Recebe o mesmo event_id do Pixel
-// para o Meta deduplicar. Só aceita "Lead" — a decisão de QUANDO disparar
-// fica em `src/lib/lead.ts`.
+// para o Meta deduplicar. A decisão de QUANDO disparar fica em `src/lib/lead.ts`.
+// "Lead" = tem entrada. "SemEntrada" = evento personalizado (não conta como Lead).
 
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || "v24.0";
-const ENTRADAS = new Set(["completa", "parcial"]);
+const EVENTOS = new Set(["Lead", "SemEntrada"]);
+const ENTRADAS = new Set(["completa", "parcial", "sem-entrada"]);
 
 function str(value: unknown, max: number): string | undefined {
   return typeof value === "string" && value.length > 0 && value.length <= max ? value : undefined;
@@ -27,7 +28,13 @@ export async function POST(request: NextRequest) {
 
   const eventId = str(body.event_id, 100);
   const eventUrl = str(body.event_url, 2000);
-  if (body.event_name !== "Lead" || !eventId || !eventUrl?.startsWith("http")) {
+  const eventName = body.event_name;
+  if (
+    typeof eventName !== "string" ||
+    !EVENTOS.has(eventName) ||
+    !eventId ||
+    !eventUrl?.startsWith("http")
+  ) {
     return NextResponse.json({ error: "Invalid event" }, { status: 400 });
   }
 
@@ -41,7 +48,7 @@ export async function POST(request: NextRequest) {
     undefined;
 
   const event = {
-    event_name: "Lead",
+    event_name: eventName,
     event_time: Math.floor(Date.now() / 1000),
     action_source: "website",
     event_id: eventId,

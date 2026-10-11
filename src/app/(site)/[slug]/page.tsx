@@ -1,36 +1,39 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { IMOVEIS, formatPreco, getImovel } from "@/content/imoveis";
+import { formatPreco, isListado, isPublicado } from "@/content/imoveis";
+import { getImovel, getImoveis } from "@/lib/store";
 import { CORRETORA, siteUrl } from "@/content/site";
 import { ImovelPage } from "@/components/landing/ImovelPage";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export const dynamicParams = false;
+// Imóveis criados depois do deploy são gerados na primeira visita.
+export const dynamicParams = true;
 
-export function generateStaticParams() {
-  return IMOVEIS.map((i) => ({ slug: i.slug }));
+export async function generateStaticParams() {
+  return (await getImoveis()).map((i) => ({ slug: i.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const imovel = getImovel((await params).slug);
+  const imovel = await getImovel((await params).slug);
   if (!imovel) return {};
-  const og = `/imoveis/${imovel.slug}/og.jpg`;
+  const og = imovel.ogImage || imovel.capa;
   return {
     title: { absolute: imovel.seo.title },
     description: imovel.seo.description,
     alternates: { canonical: `/${imovel.slug}` },
+    ...(!isPublicado(imovel) && { robots: { index: false } }),
     openGraph: {
       title: imovel.seo.title,
       description: imovel.seo.description,
       url: `/${imovel.slug}`,
-      images: [{ url: og, width: 1200, height: 630 }],
+      images: [{ url: og }],
     },
   };
 }
 
 export default async function Page({ params }: Props) {
-  const imovel = getImovel((await params).slug);
+  const imovel = await getImovel((await params).slug);
   if (!imovel) notFound();
 
   const jsonLd = {
@@ -39,7 +42,7 @@ export default async function Page({ params }: Props) {
     name: imovel.seo.title,
     description: imovel.seo.description,
     url: `${siteUrl()}/${imovel.slug}`,
-    image: imovel.galeria.fotos.slice(0, 5).map((f) => `${siteUrl()}${f.src}`),
+    image: imovel.galeria.fotos.slice(0, 5).map((f) => (f.src.startsWith("http") ? f.src : `${siteUrl()}${f.src}`)),
     offers: {
       "@type": "Offer",
       price: imovel.preco,
@@ -60,7 +63,7 @@ export default async function Page({ params }: Props) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ImovelPage imovel={imovel} />
+      <ImovelPage imovel={imovel} listados={(await getImoveis()).filter(isListado)} />
     </>
   );
 }

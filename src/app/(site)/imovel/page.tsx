@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Lock } from "lucide-react";
 import { CORRETORA } from "@/content/site";
+import { ENTRADA_PADRAO } from "@/lib/lead";
 import { LeadProvider } from "@/components/lead/LeadProvider";
 import { LeadButton } from "@/components/lead/LeadButton";
 
@@ -24,9 +25,12 @@ export default async function ImovelGenericoPage({ searchParams }: Props) {
   const nome = param(params.nome) ?? param(params.imovel); // `imovel` = links antigos
   const valor = param(params.valor);
   const assunto = nome ? `${nome}${valor ? ` (R$ ${valor})` : ""}` : undefined;
+  // "450.000" -> 450000 -> entrada de 20% para as faixas da enquete
+  const valorNum = valor ? Number(valor.replace(/D/g, "")) : 0;
+  const entradaMinima = valorNum >= 10_000 ? Math.round((valorNum * ENTRADA_PADRAO) / 100) * 100 : undefined;
 
   return (
-    <LeadProvider assunto={assunto} contentName="imovel-generico">
+    <LeadProvider assunto={assunto} contentName="imovel-generico" entradaMinima={entradaMinima}>
       <main className="flex min-h-dvh items-center justify-center bg-sand px-4 py-10">
         <div className="w-full max-w-md">
           <div className="rounded-3xl bg-white p-6 text-center shadow-xl shadow-ink/5 md:p-8">

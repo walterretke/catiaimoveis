@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  ENTRADA_OPCOES,
   buildLeadMessage,
   buildWhatsAppUrl,
+  entradaOpcoes,
+  formatMil,
+  trackAbriuEnquete,
   trackEntrada,
   type LeadEventPayload,
 } from "./lead.ts";
@@ -24,55 +26,77 @@ function setup() {
   return { fbqCalls, serverCalls, deps, ctx };
 }
 
-const opcao = (id: string) => ENTRADA_OPCOES.find((o) => o.id === id)!;
+for (const [nome, opcoes] of [
+  ["genéricas", entradaOpcoes()],
+  ["com valor", entradaOpcoes(77_000)],
+] as const) {
+  const opcao = (id: string) => opcoes.find((o) => o.id === id)!;
 
-for (const id of ["completa", "parcial"]) {
-  test(`entrada "${id}" dispara Lead no Pixel e na CAPI com o mesmo event_id`, () => {
+  for (const id of ["completa", "parcial"]) {
+    test(`[${nome}] "${id}" dispara Lead no Pixel e na CAPI com o mesmo event_id`, () => {
+      const { fbqCalls, serverCalls, deps, ctx } = setup();
+
+      assert.equal(trackEntrada(opcao(id), ctx, deps), true);
+
+      assert.deepEqual(fbqCalls, [
+        ["track", "Lead", { content_name: "loteamento-mirage", entrada: id }, { eventID: "evt-123" }],
+      ]);
+      assert.equal(serverCalls.length, 1);
+      assert.equal(serverCalls[0].event_name, "Lead");
+      assert.equal(serverCalls[0].event_id, "evt-123");
+    });
+  }
+
+  test(`[${nome}] "sem-entrada" NÃO dispara Lead, só o evento personalizado SemEntrada`, () => {
     const { fbqCalls, serverCalls, deps, ctx } = setup();
 
-    assert.equal(trackEntrada(opcao(id), ctx, deps), true);
+    assert.equal(trackEntrada(opcao("sem-entrada"), ctx, deps), false);
 
     assert.equal(fbqCalls.length, 1);
-    const [cmd, event, data, opts] = fbqCalls[0];
-    assert.equal(cmd, "track");
-    assert.equal(event, "Lead");
-    assert.deepEqual(data, { content_name: "loteamento-mirage", entrada: id });
-    assert.deepEqual(opts, { eventID: "evt-123" });
-
+    assert.equal(fbqCalls[0][0], "trackCustom");
+    assert.equal(fbqCalls[0][1], "SemEntrada");
     assert.equal(serverCalls.length, 1);
-    assert.equal(serverCalls[0].event_name, "Lead");
-    assert.equal(serverCalls[0].event_id, "evt-123");
-    assert.equal(serverCalls[0].event_url, ctx.url);
+    assert.equal(serverCalls[0].event_name, "SemEntrada");
+    assert.ok(!fbqCalls.some((c) => c[1] === "Lead"));
+    assert.ok(!serverCalls.some((c) => c.event_name === "Lead"));
+  });
+
+  test(`[${nome}] só a opção sem entrada é não qualificada`, () => {
+    assert.deepEqual(
+      opcoes.filter((o) => !o.qualificado).map((o) => o.id),
+      ["sem-entrada"],
+    );
   });
 }
 
-test('"sem-entrada" NÃO dispara nenhum evento', () => {
-  const { fbqCalls, serverCalls, deps, ctx } = setup();
-  assert.equal(trackEntrada(opcao("sem-entrada"), ctx, deps), false);
-  assert.equal(fbqCalls.length, 0);
-  assert.equal(serverCalls.length, 0);
+test("faixas com valor usam a entrada mínima e metade dela", () => {
+  const [completa, parcial, sem] = entradaOpcoes(77_000);
+  assert.equal(completa.label, "Tenho R$ 77 mil ou mais");
+  assert.equal(parcial.label, "Tenho entre R$ 39 mil e R$ 77 mil");
+  assert.equal(sem.label, "Tenho menos de R$ 39 mil ou não tenho");
+  assert.equal(formatMil(69_600), "R$ 69,6 mil");
 });
 
 test("pixel bloqueado (sem fbq) ainda envia pela CAPI", () => {
-  const { serverCalls, ctx } = setup();
+  const { ctx } = setup();
   const sent: LeadEventPayload[] = [];
-  trackEntrada(opcao("completa"), ctx, { sendServerEvent: (p) => void sent.push(p) });
+  trackEntrada(entradaOpcoes()[0], ctx, { sendServerEvent: (p) => void sent.push(p) });
   assert.equal(sent.length, 1);
-  assert.equal(serverCalls.length, 0);
 });
 
-test("só existe uma opção não qualificada e ela é a de sem entrada", () => {
-  const naoQualificadas = ENTRADA_OPCOES.filter((o) => !o.qualificado).map((o) => o.id);
-  assert.deepEqual(naoQualificadas, ["sem-entrada"]);
+test("abrir a enquete gera só AbriuEnquete (nunca Lead)", () => {
+  const calls: unknown[][] = [];
+  trackAbriuEnquete("home", (...a) => void calls.push(a));
+  assert.deepEqual(calls, [["trackCustom", "AbriuEnquete", { content_name: "home" }]]);
 });
 
 test("mensagem do WhatsApp inclui imóvel e resposta da entrada", () => {
-  const msg = buildLeadMessage(opcao("parcial"), "Mirage (R$ 385.000)");
+  const msg = buildLeadMessage(entradaOpcoes(77_000)[1], "Mirage (R$ 385.000)");
   assert.equal(
     msg,
-    "Olá Cátia! Tenho interesse no Mirage (R$ 385.000). Sobre a entrada: Tenho apenas uma parte do valor. Gostaria de mais informações.",
+    "Olá Cátia! Tenho interesse no Mirage (R$ 385.000). Sobre a entrada: Tenho entre R$ 39 mil e R$ 77 mil. Gostaria de mais informações.",
   );
-  assert.match(buildLeadMessage(opcao("completa")), /^Olá Cátia! Estou procurando imóveis/);
+  assert.match(buildLeadMessage(entradaOpcoes()[0]), /^Olá Cátia! Estou procurando imóveis/);
   assert.equal(
     buildWhatsAppUrl("5547999999999", "a b&c"),
     "https://api.whatsapp.com/send?phone=5547999999999&text=a%20b%26c",

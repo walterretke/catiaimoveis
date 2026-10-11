@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Award, Home, MapPin, ShieldCheck, Star, TreePine, Waves } from "lucide-react";
-import { IMOVEIS, formatPreco } from "@/content/imoveis";
+import { formatPreco, isListado } from "@/content/imoveis";
+import { getImoveis } from "@/lib/store";
 import { CORRETORA } from "@/content/site";
 import { InstagramIcon } from "@/components/icons";
 import { LeadProvider } from "@/components/lead/LeadProvider";
@@ -17,8 +18,8 @@ const PERFIS = [
   { icon: Star, titulo: "Investimentos", texto: "Oportunidades com potencial de valorização." },
 ];
 
-export default function HomePage() {
-  const disponiveis = IMOVEIS.filter((i) => i.status === "disponivel");
+export default async function HomePage() {
+  const disponiveis = (await getImoveis()).filter(isListado);
 
   return (
     <LeadProvider contentName="home">
@@ -86,7 +87,7 @@ export default function HomePage() {
                       className="object-cover transition duration-700 group-hover:scale-105"
                     />
                     <span className="absolute top-3 left-3 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-white">
-                      {imovel.selos[0]}
+                      {imovel.selos[0] ?? imovel.tipo}
                     </span>
                   </div>
                   <div className="p-5">
@@ -160,7 +161,7 @@ export default function HomePage() {
         />
       </main>
 
-      <SiteFooter />
+      <SiteFooter imoveis={disponiveis} />
       <StickyLeadBar />
     </LeadProvider>
   );

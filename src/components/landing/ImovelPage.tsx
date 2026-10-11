@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Check, MapPin } from "lucide-react";
-import { IMOVEIS, assuntoWhatsApp, formatPreco, type Imovel } from "@/content/imoveis";
+import { assuntoWhatsApp, entradaMinimaDe, formatPreco, type Imovel } from "@/content/imoveis";
 import { LeadProvider } from "@/components/lead/LeadProvider";
 import { LeadButton } from "@/components/lead/LeadButton";
 import { StickyLeadBar } from "@/components/lead/StickyLeadBar";
@@ -11,14 +11,23 @@ import { Gallery } from "./Gallery";
 import { ComoFunciona, CtaFinal, SectionHeading } from "./Sections";
 import { SiteFooter } from "./SiteFooter";
 
-export function ImovelPage({ imovel }: { imovel: Imovel }) {
+const SPEC_COLS = ["", "grid-cols-1", "grid-cols-2", "grid-cols-3", "grid-cols-4"];
+
+interface Props {
+  imovel: Imovel;
+  /** Imóveis listados no site (para o rodapé e para sugerir quando vendido). */
+  listados: Imovel[];
+}
+
+export function ImovelPage({ imovel, listados }: Props) {
   const vendido = imovel.status === "vendido";
   const preco = formatPreco(imovel.preco);
-  const outros = IMOVEIS.filter((i) => i.slug !== imovel.slug && i.status === "disponivel");
+  const outros = listados.filter((i) => i.slug !== imovel.slug);
 
   return (
     <LeadProvider
       contentName={imovel.slug}
+      entradaMinima={entradaMinimaDe(imovel)}
       assunto={vendido ? `imóvel parecido com o ${imovel.nome}` : assuntoWhatsApp(imovel)}
     >
       <main>
@@ -59,14 +68,18 @@ export function ImovelPage({ imovel }: { imovel: Imovel }) {
             </div>
 
             <h1 className="font-display text-5xl leading-[0.95] font-semibold text-white md:text-7xl">
-              {imovel.titulo[0]} <span className="block text-gold-soft">{imovel.titulo[1]}</span>
+              {imovel.titulo[0]}{" "}
+              {imovel.titulo[1] && <span className="block text-gold-soft">{imovel.titulo[1]}</span>}
             </h1>
 
             <p className="mt-3 flex items-center gap-1.5 text-sm text-white/75">
               <MapPin className="size-4" /> {imovel.localizacao.bairro}, {imovel.localizacao.cidade}
             </p>
 
-            <dl className="mt-6 grid max-w-xl grid-cols-3 divide-x divide-white/15 rounded-2xl bg-white/10 py-3 backdrop-blur-md">
+            {imovel.specs.length > 0 && (
+            <dl
+              className={`mt-6 grid max-w-xl ${SPEC_COLS[imovel.specs.length]} divide-x divide-white/15 rounded-2xl bg-white/10 py-3 backdrop-blur-md`}
+            >
               {imovel.specs.map((s) => (
                 <div key={s.label} className="px-3 text-center">
                   <dt className="text-[11px] text-white/60">{s.label}</dt>
@@ -74,6 +87,7 @@ export function ImovelPage({ imovel }: { imovel: Imovel }) {
                 </div>
               ))}
             </dl>
+            )}
 
             <div className="mt-6 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
               <div>
@@ -169,8 +183,12 @@ export function ImovelPage({ imovel }: { imovel: Imovel }) {
                   </span>
                   <div>
                     <p className="font-semibold text-ink">{imovel.localizacao.bairro}</p>
-                    <p className="text-xs font-medium text-gold">{imovel.localizacao.referencia}</p>
-                    <p className="mt-2 text-sm leading-relaxed text-muted">{imovel.localizacao.texto}</p>
+                    <p className="text-xs font-medium text-gold">
+                      {imovel.localizacao.referencia || imovel.localizacao.cidade}
+                    </p>
+                    {imovel.localizacao.texto && (
+                      <p className="mt-2 text-sm leading-relaxed text-muted">{imovel.localizacao.texto}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -191,7 +209,7 @@ export function ImovelPage({ imovel }: { imovel: Imovel }) {
         />
       </main>
 
-      <SiteFooter />
+      <SiteFooter imoveis={listados} />
       <StickyLeadBar preco={vendido ? undefined : preco} nota={vendido ? undefined : imovel.notaPreco} />
     </LeadProvider>
   );

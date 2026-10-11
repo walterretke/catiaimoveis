@@ -66,3 +66,8 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Botões secundários do painel /admin */
+@utility btn-admin {
+  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium transition hover:border-ink disabled:pointer-events-none disabled:opacity-30;
+}
