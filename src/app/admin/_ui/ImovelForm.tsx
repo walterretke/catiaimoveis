@@ -631,7 +631,7 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
               {d.specs.map((s, n) => (
                 <div key={n} className="flex items-center gap-2">
                   <input
-                    className={inputCls}
+                    className={`${inputCls} min-w-0 flex-[3]`}
                     list="specs"
                     placeholder="O quê"
                     value={s.label}
@@ -639,7 +639,7 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
                   />
                   <span className="text-muted">→</span>
                   <input
-                    className={inputCls}
+                    className={`${inputCls} min-w-0 flex-[2]`}
                     placeholder="Valor"
                     value={s.valor}
                     onChange={(e) => set("specs", d.specs.map((x, k) => (k === n ? { ...x, valor: e.target.value } : x)))}
