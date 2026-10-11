@@ -10,6 +10,7 @@ import { BrokerPill } from "./BrokerPill";
 import { Gallery } from "./Gallery";
 import { ComoFunciona, CtaFinal, SectionHeading } from "./Sections";
 import { SiteFooter } from "./SiteFooter";
+import { ImovelCard } from "./ImovelCard";
 
 const SPEC_COLS = ["", "grid-cols-1", "grid-cols-2", "grid-cols-3", "grid-cols-4"];
 
@@ -207,6 +208,21 @@ export function ImovelPage({ imovel, listados }: Props) {
           }
           botao={vendido ? "Quero opções parecidas" : undefined}
         />
+        {outros.length > 0 && (
+          <section className="px-4 pb-16 md:pb-24">
+            <div className="mx-auto max-w-6xl">
+              <SectionHeading
+                eyebrow="Outras oportunidades"
+                title={vendido ? "Veja estes imóveis" : "Quer ver outras opções?"}
+              />
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {outros.map((o) => (
+                  <ImovelCard key={o.slug} imovel={o} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       <SiteFooter imoveis={listados} />

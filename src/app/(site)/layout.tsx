@@ -1,4 +1,5 @@
 import Script from "next/script";
+import { PixelPageView } from "@/components/PixelPageView";
 
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
@@ -33,6 +34,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           alt=""
         />
       </noscript>
+      <PixelPageView />
       {children}
     </>
   );

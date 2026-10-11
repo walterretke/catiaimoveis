@@ -3,13 +3,13 @@ import type { ImovelStatus } from "@/content/imoveis";
 export const STATUS_LABEL: Record<ImovelStatus, string> = {
   disponivel: "Disponível",
   vendido: "Vendido",
-  oculto: "Oculto",
+  oculto: "Escondido",
 };
 
 export const STATUS_AJUDA: Record<ImovelStatus, string> = {
   disponivel: "Aparece na página inicial.",
   vendido: "Página continua no ar com selo de vendido e sugere outros imóveis.",
-  oculto: "Página funciona pelo link, mas não aparece na página inicial. Bom para preparar antes de publicar.",
+  oculto: "Não aparece na página inicial. Só abre por quem tem o link.",
 };
 
 const CORES: Record<ImovelStatus, string> = {

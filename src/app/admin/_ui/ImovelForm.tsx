@@ -1,15 +1,18 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Check,
   ChevronLeft,
   ChevronRight,
+  Copy,
   ExternalLink,
   ImagePlus,
+  Lightbulb,
   Loader2,
   Plus,
   Star,
@@ -27,7 +30,6 @@ import {
 } from "@/content/imoveis";
 import { salvarImovel } from "../actions";
 import { enviarFoto } from "./foto-utils";
-import { STATUS_AJUDA, STATUS_LABEL } from "./status";
 
 // ---------- rascunho do formulário ----------
 
@@ -79,7 +81,13 @@ function toDraft(i?: Imovel): Draft {
     titulo1: i?.titulo[0] ?? "",
     titulo2: i?.titulo[1] ?? "",
     selos: [0, 1, 2].map((n) => i?.selos[n] ?? ""),
-    specs: i?.specs.length ? i.specs : [{ label: "Dormitórios", valor: "" }, { label: "Área privativa", valor: "" }, { label: "Garagem", valor: "" }],
+    specs: i?.specs.length
+      ? i.specs
+      : [
+          { label: "Dormitórios", valor: "" },
+          { label: "Área privativa", valor: "" },
+          { label: "Garagem", valor: "" },
+        ],
     resumo: i?.resumo ?? "",
     fotos: i?.galeria.fotos ?? [],
     capa: i?.capa ?? "",
@@ -129,37 +137,67 @@ function fromDraft(d: Draft) {
   };
 }
 
-// ---------- campos ----------
+// ---------- peças visuais ----------
 
 const inputCls =
-  "h-11 w-full rounded-xl border border-line bg-white px-3 text-[15px] outline-none transition focus:border-gold";
+  "h-12 w-full rounded-xl border border-line bg-white px-3 text-base outline-none transition focus:border-gold";
 
+/** Campo com título, explicação em linguagem simples e "onde aparece". */
 function Field({
   label,
-  hint,
+  obrigatorio,
+  explica,
+  ondeAparece,
   children,
-  className,
 }: {
   label: string;
-  hint?: string;
+  obrigatorio?: boolean;
+  explica?: React.ReactNode;
+  ondeAparece?: string;
   children: React.ReactNode;
-  className?: string;
 }) {
   return (
-    <label className={`block ${className ?? ""}`}>
-      <span className="text-sm font-medium">{label}</span>
-      <div className="mt-1">{children}</div>
-      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
+    <label className="block">
+      <span className="text-[15px] font-semibold">
+        {label}
+        {obrigatorio ? (
+          <span className="ml-1.5 rounded bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-600">
+            obrigatório
+          </span>
+        ) : (
+          <span className="ml-1.5 text-xs font-normal text-muted">(pode deixar em branco)</span>
+        )}
+      </span>
+      {explica && <span className="mt-0.5 block text-sm text-ink-soft">{explica}</span>}
+      <div className="mt-1.5">{children}</div>
+      {ondeAparece && <span className="mt-1 block text-xs text-muted">📍 Onde aparece: {ondeAparece}</span>}
     </label>
   );
 }
 
-function Card({ titulo, descricao, children }: { titulo: string; descricao?: string; children: React.ReactNode }) {
+function Card({
+  numero,
+  titulo,
+  descricao,
+  children,
+}: {
+  numero: number;
+  titulo: string;
+  descricao?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="rounded-2xl bg-white p-4 shadow-sm md:p-6">
-      <h2 className="font-display text-xl font-semibold">{titulo}</h2>
-      {descricao && <p className="mt-0.5 text-sm text-muted">{descricao}</p>}
-      <div className="mt-4 space-y-4">{children}</div>
+      <div className="flex items-start gap-3">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white">
+          {numero}
+        </span>
+        <div>
+          <h2 className="font-display text-xl font-semibold">{titulo}</h2>
+          {descricao && <p className="mt-0.5 text-sm text-muted">{descricao}</p>}
+        </div>
+      </div>
+      <div className="mt-5 space-y-6">{children}</div>
     </section>
   );
 }
@@ -182,24 +220,53 @@ const LEGENDAS = [
 ];
 const SPECS_SUGERIDAS = ["Dormitórios", "Suítes", "Área privativa", "Garagem", "Banheiros", "Terreno"];
 
+const SITUACOES: { valor: ImovelStatus; titulo: string; texto: string }[] = [
+  { valor: "disponivel", titulo: "Disponível", texto: "Aparece no site e na página inicial." },
+  { valor: "vendido", titulo: "Vendido", texto: "Continua no site com o selo “Vendido” e mostra outros imóveis." },
+  {
+    valor: "oculto",
+    titulo: "Escondido",
+    texto: "Não aparece na página inicial. Só abre por quem tem o link. Bom para revisar antes de anunciar.",
+  },
+];
+
 // ---------- formulário ----------
 
 export function ImovelForm({ imovel }: { imovel?: Imovel }) {
   const router = useRouter();
   const editando = !!imovel;
   const [d, setD] = useState<Draft>(() => toDraft(imovel));
+  const [alterado, setAlterado] = useState(false);
   const [salvando, startSave] = useTransition();
   const [enviando, setEnviando] = useState(0);
   const [erro, setErro] = useState("");
   const [salvoEm, setSalvoEm] = useState("");
+  const [copiado, setCopiado] = useState(false);
+  // domínio atual (só existe no navegador)
+  const origem = useSyncExternalStore(
+    () => () => {},
+    () => window.location.host,
+    () => "",
+  );
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Avisa antes de sair da página com alterações não salvas
+  useEffect(() => {
+    if (!alterado) return;
+    const aviso = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", aviso);
+    return () => window.removeEventListener("beforeunload", aviso);
+  }, [alterado]);
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => {
     setD((prev) => ({ ...prev, [k]: v }));
+    setAlterado(true);
     setSalvoEm("");
   };
 
   const slugEfetivo = d.slug || slugify(d.nome);
+  const slugPublicado = imovel?.slug ?? "";
+  const linkPagina = `${origem}/${slugPublicado || slugEfetivo}`;
   const precoNum = Number(digits(d.preco)) || 0;
   const entradaPadrao = precoNum ? entradaMinimaDe({ preco: precoNum }) : 0;
   const capaAtual = d.capa || d.fotos[0]?.src;
@@ -213,8 +280,9 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
       try {
         const src = await enviarFoto(file, slugEfetivo || "novo");
         setD((prev) => ({ ...prev, fotos: [...prev.fotos, { src, legenda: "" }] }));
+        setAlterado(true);
       } catch (e) {
-        setErro(`Erro ao enviar ${file.name}: ${(e as Error).message}`);
+        setErro(`Não consegui enviar a foto ${file.name}: ${(e as Error).message}`);
       }
       setEnviando((n) => n - 1);
     }
@@ -237,6 +305,13 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
       capa: prev.capa === src ? "" : prev.capa,
       destaquesImagem: prev.destaquesImagem === src ? "" : prev.destaquesImagem,
     }));
+    setAlterado(true);
+  }
+
+  async function copiarLink() {
+    await navigator.clipboard.writeText(`https://${linkPagina}`);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
   }
 
   function salvar() {
@@ -247,6 +322,7 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
         setErro(res.erro);
         return;
       }
+      setAlterado(false);
       setSalvoEm(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
       if (!editando || res.slug !== imovel?.slug) router.replace(`/admin/editar/${res.slug}`);
       else router.refresh();
@@ -254,114 +330,192 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6 pb-32 md:py-10">
+    <main className="mx-auto max-w-3xl px-4 py-6 pb-36 md:py-10">
       <Link href="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
         <ArrowLeft className="size-4" /> Voltar para a lista
       </Link>
-      <h1 className="mb-6 font-display text-3xl font-semibold">
-        {editando ? `Editar: ${imovel.nome}` : "Novo imóvel"}
+      <h1 className="mb-4 font-display text-3xl font-semibold">
+        {editando ? `Editar: ${imovel.nome}` : "Cadastrar novo imóvel"}
       </h1>
 
+      <div className="mb-4 flex gap-3 rounded-2xl bg-gold-soft p-4 text-sm leading-relaxed">
+        <Lightbulb className="mt-0.5 size-5 shrink-0 text-gold" />
+        <p>
+          <strong>Para cadastrar rápido:</strong> preencha o <strong>nome</strong>, o <strong>preço</strong> e o{" "}
+          <strong>bairro</strong>, envie as <strong>fotos</strong> e toque em <strong>Salvar</strong> lá embaixo. O
+          resto é opcional: o que ficar em branco, o site preenche sozinho. Dá para voltar e completar depois.
+        </p>
+      </div>
+
       <div className="space-y-4">
-        {/* ---------- BÁSICO ---------- */}
-        <Card titulo="O essencial" descricao="Só nome, preço e fotos são obrigatórios. O resto tem padrão.">
-          <Field label="Nome do imóvel *" hint="Aparece na mensagem do WhatsApp. Ex.: Apartamento Mobiliado Baependi">
+        {/* ---------- 1. PRINCIPAL ---------- */}
+        <Card numero={1} titulo="Informações principais">
+          <Field
+            label="Nome do imóvel"
+            obrigatorio
+            explica="Como você chama este imóvel. Ex.: Apartamento Mobiliado Baependi"
+            ondeAparece="na mensagem que o cliente te manda no WhatsApp e na lista de imóveis."
+          >
             <input className={inputCls} value={d.nome} onChange={(e) => set("nome", e.target.value)} />
           </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Tipo">
-              <input className={inputCls} list="tipos" value={d.tipo} placeholder="Apartamento" onChange={(e) => set("tipo", e.target.value)} />
-              <datalist id="tipos">
-                {TIPOS.map((t) => (
-                  <option key={t} value={t} />
-                ))}
-              </datalist>
-            </Field>
-            <Field label="Bairro">
-              <input className={inputCls} value={d.bairro} placeholder="Três Rios do Norte" onChange={(e) => set("bairro", e.target.value)} />
-            </Field>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Preço (R$) *">
+          <Field
+            label="Preço"
+            obrigatorio
+            explica="Só os números. Os pontos aparecem sozinhos."
+            ondeAparece="em destaque no topo da página do imóvel."
+          >
+            <div className="flex items-center rounded-xl border border-line bg-white focus-within:border-gold">
+              <span className="pl-3 text-muted">R$</span>
               <input
-                className={inputCls}
+                className="h-12 w-full rounded-xl px-2 text-base outline-none"
                 inputMode="numeric"
                 value={d.preco}
                 placeholder="385.000"
                 onChange={(e) => set("preco", moeda(Number(digits(e.target.value))))}
               />
-            </Field>
-            <Field label="Preço antigo (R$)" hint="Mostra “De … por …”">
+            </div>
+          </Field>
+
+          <Field
+            label="Bairro"
+            explica="Ex.: Três Rios do Norte"
+            ondeAparece="embaixo do título e no card da página inicial."
+          >
+            <input className={inputCls} value={d.bairro} onChange={(e) => set("bairro", e.target.value)} />
+          </Field>
+
+          <Field label="Tipo de imóvel" explica="Escolha da lista ou escreva. Ex.: Apartamento, Casa." ondeAparece="no card da página inicial.">
+            <input className={inputCls} list="tipos" value={d.tipo} placeholder="Toque para escolher" onChange={(e) => set("tipo", e.target.value)} />
+            <datalist id="tipos">
+              {TIPOS.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+          </Field>
+
+          <Field
+            label="Entrada mínima"
+            explica={
+              <>
+                Quanto o cliente precisa ter para dar de entrada.{" "}
+                {entradaPadrao ? (
+                  <>
+                    Se deixar em branco, uso <strong>20% do preço ({formatPreco(entradaPadrao)})</strong>.
+                  </>
+                ) : (
+                  "Se deixar em branco, uso 20% do preço."
+                )}{" "}
+                Esse valor monta a pergunta que aparece antes do WhatsApp. Quem tiver pelo menos a metade dele conta
+                como cliente interessado no Facebook.
+              </>
+            }
+          >
+            <div className="flex items-center rounded-xl border border-line bg-white focus-within:border-gold">
+              <span className="pl-3 text-muted">R$</span>
               <input
-                className={inputCls}
-                inputMode="numeric"
-                value={d.precoAntigo}
-                onChange={(e) => set("precoAntigo", moeda(Number(digits(e.target.value))))}
-              />
-            </Field>
-            <Field label="Entrada mínima (R$)" hint={entradaPadrao ? `Vazio = 20% (${formatPreco(entradaPadrao)})` : "Vazio = 20% do preço"}>
-              <input
-                className={inputCls}
+                className="h-12 w-full rounded-xl px-2 text-base outline-none"
                 inputMode="numeric"
                 value={d.entradaMinima}
                 placeholder={entradaPadrao ? moeda(entradaPadrao) : ""}
                 onChange={(e) => set("entradaMinima", moeda(Number(digits(e.target.value))))}
               />
-            </Field>
-          </div>
-          <p className="-mt-2 text-xs text-muted">
-            A entrada mínima define as faixas da pergunta do WhatsApp. Só vira <strong>Lead</strong> quem tem pelo
-            menos metade dela.
-          </p>
+            </div>
+          </Field>
 
-          <Field label="Situação">
-            <div className="grid grid-cols-3 gap-2">
-              {(Object.keys(STATUS_LABEL) as ImovelStatus[]).map((s) => (
+          <Field
+            label="Preço antigo (só se baixou o preço)"
+            explica="Se o imóvel teve desconto, coloque o valor anterior. Ele aparece riscado: “De R$ 368.000”. Sem desconto, deixe em branco."
+          >
+            <div className="flex items-center rounded-xl border border-line bg-white focus-within:border-gold">
+              <span className="pl-3 text-muted">R$</span>
+              <input
+                className="h-12 w-full rounded-xl px-2 text-base outline-none"
+                inputMode="numeric"
+                value={d.precoAntigo}
+                onChange={(e) => set("precoAntigo", moeda(Number(digits(e.target.value))))}
+              />
+            </div>
+          </Field>
+
+          <div>
+            <span className="text-[15px] font-semibold">Situação do imóvel</span>
+            <div className="mt-1.5 grid gap-2">
+              {SITUACOES.map((s) => (
                 <button
-                  key={s}
+                  key={s.valor}
                   type="button"
-                  onClick={() => set("status", s)}
-                  className={`h-10 rounded-xl border text-sm font-medium ${d.status === s ? "border-ink bg-ink text-white" : "border-line bg-white"}`}
+                  onClick={() => set("status", s.valor)}
+                  className={`flex items-start gap-3 rounded-xl border-2 p-3 text-left transition ${d.status === s.valor ? "border-ink bg-sand" : "border-line bg-white"}`}
                 >
-                  {STATUS_LABEL[s]}
+                  <span
+                    className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 ${d.status === s.valor ? "border-ink bg-ink text-white" : "border-line"}`}
+                  >
+                    {d.status === s.valor && <Check className="size-3" strokeWidth={3} />}
+                  </span>
+                  <span>
+                    <span className="block font-semibold">{s.titulo}</span>
+                    <span className="block text-sm text-muted">{s.texto}</span>
+                  </span>
                 </button>
               ))}
             </div>
-          </Field>
-          <p className="-mt-2 text-xs text-muted">{STATUS_AJUDA[d.status]}</p>
+          </div>
+
+          {(d.nome || slugPublicado) && origem && (
+            <div className="rounded-xl bg-sand p-3">
+              <p className="text-sm font-semibold">Link da página deste imóvel</p>
+              <p className="text-xs text-muted">
+                É este link que vai no anúncio do Facebook/Instagram.
+                {!editando && " Ele passa a funcionar depois que você salvar."}
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <code className="min-w-0 flex-1 truncate rounded-lg bg-white px-3 py-2 text-sm">{linkPagina}</code>
+                <button type="button" onClick={copiarLink} className="btn-admin h-10 bg-white">
+                  {copiado ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  {copiado ? "Copiado" : "Copiar"}
+                </button>
+              </div>
+            </div>
+          )}
         </Card>
 
-        {/* ---------- FOTOS ---------- */}
-        <Card titulo="Fotos *" descricao="Pode mandar direto do celular — o tamanho é ajustado automaticamente.">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => adicionarFotos(e.target.files)}
-          />
+        {/* ---------- 2. FOTOS ---------- */}
+        <Card
+          numero={2}
+          titulo="Fotos"
+          descricao="Pode escolher várias de uma vez, direto da galeria do celular. O tamanho é ajustado automaticamente."
+        >
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => adicionarFotos(e.target.files)} />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={enviando > 0}
-            className="flex h-24 w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-line text-sm font-medium text-muted transition hover:border-gold hover:text-ink"
+            className="flex h-28 w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-gold/60 bg-gold-soft/40 text-base font-semibold transition hover:border-gold"
           >
             {enviando > 0 ? (
               <>
-                <Loader2 className="size-6 animate-spin" /> Enviando {enviando} foto(s)…
+                <Loader2 className="size-7 animate-spin" /> Enviando {enviando} foto(s)… aguarde
               </>
             ) : (
               <>
-                <ImagePlus className="size-6" /> Adicionar fotos
+                <ImagePlus className="size-7 text-gold" /> Toque aqui para adicionar fotos
               </>
             )}
           </button>
 
-          {d.fotos.length > 0 && (
+          {d.fotos.length === 0 ? (
+            <p className="text-sm text-muted">Precisa de pelo menos uma foto para salvar.</p>
+          ) : (
             <>
+              <ul className="space-y-1.5 rounded-xl bg-sand p-3 text-sm text-ink-soft">
+                <li>
+                  ⭐ A foto marcada como <strong>Capa</strong> é a foto grande do topo. Para trocar, toque em “Usar
+                  como capa” em outra foto.
+                </li>
+                <li>✏️ Escreva embaixo de cada foto o que ela mostra (Sala, Cozinha…). Aparece na galeria.</li>
+                <li>↔️ Use as setas para mudar a ordem. A ordem aqui é a ordem da galeria do site.</li>
+              </ul>
               <datalist id="legendas">
                 {LEGENDAS.map((l) => (
                   <option key={l} value={l} />
@@ -371,18 +525,23 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
                 {d.fotos.map((f, idx) => {
                   const isCapa = f.src === capaAtual;
                   return (
-                    <li key={f.src} className="overflow-hidden rounded-xl border border-line">
+                    <li key={f.src} className={`overflow-hidden rounded-xl border-2 ${isCapa ? "border-gold" : "border-line"}`}>
                       <div className="relative aspect-[4/3] bg-sand">
                         <img src={f.src} alt="" className="size-full object-cover" />
+                        <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">
+                          {idx + 1}
+                        </span>
                         {isCapa && (
                           <span className="absolute top-1.5 left-1.5 rounded-full bg-gold px-2 py-0.5 text-[11px] font-semibold text-white">
-                            Capa
+                            ⭐ Capa
                           </span>
                         )}
                         <button
                           type="button"
-                          onClick={() => removerFoto(idx)}
-                          className="absolute top-1.5 right-1.5 rounded-full bg-black/60 p-1 text-white"
+                          onClick={() => {
+                            if (window.confirm("Remover esta foto?")) removerFoto(idx);
+                          }}
+                          className="absolute top-1.5 right-1.5 rounded-full bg-black/60 p-1.5 text-white"
                           aria-label="Remover foto"
                         >
                           <X className="size-4" />
@@ -390,31 +549,29 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
                       </div>
                       <div className="space-y-1.5 p-2">
                         <input
-                          className="h-9 w-full rounded-lg border border-line px-2 text-sm outline-none focus:border-gold"
+                          className="h-10 w-full rounded-lg border border-line px-2 text-sm outline-none focus:border-gold"
                           list="legendas"
-                          placeholder="Legenda (ex.: Sala)"
+                          placeholder="O que mostra? Ex.: Sala"
                           value={f.legenda}
-                          onChange={(e) =>
-                            set(
-                              "fotos",
-                              d.fotos.map((x, n) => (n === idx ? { ...x, legenda: e.target.value } : x)),
-                            )
-                          }
+                          onChange={(e) => set("fotos", d.fotos.map((x, n) => (n === idx ? { ...x, legenda: e.target.value } : x)))}
                         />
                         <div className="flex items-center gap-1">
-                          <button type="button" className="btn-admin px-1.5" onClick={() => moverFoto(idx, -1)} disabled={idx === 0} aria-label="Mover para a esquerda">
+                          <button type="button" className="btn-admin px-2" onClick={() => moverFoto(idx, -1)} disabled={idx === 0} aria-label="Mover para trás">
                             <ChevronLeft className="size-4" />
                           </button>
-                          <button type="button" className="btn-admin px-1.5" onClick={() => moverFoto(idx, 1)} disabled={idx === d.fotos.length - 1} aria-label="Mover para a direita">
+                          <button type="button" className="btn-admin px-2" onClick={() => moverFoto(idx, 1)} disabled={idx === d.fotos.length - 1} aria-label="Mover para frente">
                             <ChevronRight className="size-4" />
                           </button>
                           {!isCapa && (
                             <button
                               type="button"
                               className="btn-admin ml-auto px-2 text-xs"
-                              onClick={() => setD((p) => ({ ...p, capa: f.src, ogImage: "" }))}
+                              onClick={() => {
+                                setD((p) => ({ ...p, capa: f.src, ogImage: "" }));
+                                setAlterado(true);
+                              }}
                             >
-                              <Star className="size-3.5" /> Capa
+                              <Star className="size-3.5" /> Usar como capa
                             </button>
                           )}
                         </div>
@@ -423,28 +580,37 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
                   );
                 })}
               </ul>
-              <p className="text-xs text-muted">A ordem aqui é a ordem da galeria. A capa é a foto grande do topo.</p>
             </>
           )}
         </Card>
 
-        {/* ---------- TOPO DA PÁGINA ---------- */}
-        <Card titulo="Topo da página" descricao="O que a pessoa vê primeiro ao chegar do anúncio.">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Título — linha 1">
-              <input className={inputCls} value={d.titulo1} placeholder={d.nome || "Ex.: Loteamento"} onChange={(e) => set("titulo1", e.target.value)} />
-            </Field>
-            <Field label="Título — linha 2 (dourada)">
-              <input className={inputCls} value={d.titulo2} placeholder="Ex.: Mirage (opcional)" onChange={(e) => set("titulo2", e.target.value)} />
-            </Field>
-          </div>
+        {/* ---------- 3. TOPO ---------- */}
+        <Card
+          numero={3}
+          titulo="Topo da página"
+          descricao="É a primeira coisa que o cliente vê quando clica no anúncio, por cima da foto de capa."
+        >
+          <Field
+            label="Título grande"
+            explica="O nome em letras grandes. Pode dividir em duas linhas: a segunda fica dourada. Em branco, uso o nome do imóvel."
+          >
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input className={inputCls} value={d.titulo1} placeholder={`1ª linha. Ex.: ${d.nome ? d.nome.split(" ")[0] : "Mobiliado"}`} onChange={(e) => set("titulo1", e.target.value)} />
+              <input className={inputCls} value={d.titulo2} placeholder="2ª linha, dourada. Ex.: Baependi" onChange={(e) => set("titulo2", e.target.value)} />
+            </div>
+          </Field>
 
-          <Field label="Selos (até 3)" hint="O primeiro fica em destaque. Ex.: Últimas unidades, Aceita FGTS">
+          <Field
+            label="Etiquetas (até 3)"
+            explica="Frases curtas que chamam atenção. A primeira fica dourada. Ex.: Oportunidade única, Aceita FGTS, Pronto para morar."
+            ondeAparece="acima do título, e a primeira também no card da página inicial."
+          >
             <div className="grid gap-2 sm:grid-cols-3">
               {d.selos.map((s, n) => (
                 <input
                   key={n}
                   className={inputCls}
+                  placeholder={`Etiqueta ${n + 1}`}
                   value={s}
                   onChange={(e) => set("selos", d.selos.map((x, k) => (k === n ? e.target.value : x)))}
                 />
@@ -453,24 +619,32 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
           </Field>
 
           <div>
-            <span className="text-sm font-medium">Características (até 4)</span>
-            <div className="mt-1 space-y-2">
+            <span className="text-[15px] font-semibold">
+              Números do imóvel (até 4)
+              <span className="ml-1.5 text-xs font-normal text-muted">(pode deixar em branco)</span>
+            </span>
+            <span className="mt-0.5 block text-sm text-ink-soft">
+              Na esquerda, o que é; na direita, o valor. Ex.: <em>Dormitórios → 2</em>, <em>Garagem → 2 carros</em>,{" "}
+              <em>Área privativa → 80 m²</em>. Linhas sem valor não aparecem no site.
+            </span>
+            <div className="mt-2 space-y-2">
               {d.specs.map((s, n) => (
-                <div key={n} className="flex gap-2">
+                <div key={n} className="flex items-center gap-2">
                   <input
                     className={inputCls}
                     list="specs"
-                    placeholder="Ex.: Dormitórios"
+                    placeholder="O quê"
                     value={s.label}
                     onChange={(e) => set("specs", d.specs.map((x, k) => (k === n ? { ...x, label: e.target.value } : x)))}
                   />
+                  <span className="text-muted">→</span>
                   <input
                     className={inputCls}
-                    placeholder="Ex.: 2"
+                    placeholder="Valor"
                     value={s.valor}
                     onChange={(e) => set("specs", d.specs.map((x, k) => (k === n ? { ...x, valor: e.target.value } : x)))}
                   />
-                  <button type="button" className="btn-admin h-11 px-2" onClick={() => set("specs", d.specs.filter((_, k) => k !== n))} aria-label="Remover">
+                  <button type="button" className="btn-admin h-12 px-2.5" onClick={() => set("specs", d.specs.filter((_, k) => k !== n))} aria-label="Remover linha">
                     <Trash2 className="size-4" />
                   </button>
                 </div>
@@ -481,47 +655,72 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
                 ))}
               </datalist>
               {d.specs.length < 4 && (
-                <button type="button" className="btn-admin" onClick={() => set("specs", [...d.specs, { label: "", valor: "" }])}>
-                  <Plus className="size-4" /> Adicionar
+                <button type="button" className="btn-admin h-10" onClick={() => set("specs", [...d.specs, { label: "", valor: "" }])}>
+                  <Plus className="size-4" /> Adicionar linha
                 </button>
               )}
             </div>
+            <span className="mt-1 block text-xs text-muted">📍 Onde aparece: numa faixa embaixo do título.</span>
           </div>
 
-          <Field label="Texto abaixo do preço" hint="Vazio = “Aceita financiamento. Entrada a partir de …”">
+          <Field
+            label="Frase embaixo do preço"
+            explica={
+              <>
+                Uma frase curta sobre pagamento. Ex.: <em>Aceita financiamento e FGTS</em>. Em branco, aparece “Aceita
+                financiamento. Entrada a partir de {entradaPadrao ? formatPreco(Number(digits(d.entradaMinima)) || entradaPadrao) : "R$ …"}”.
+              </>
+            }
+          >
             <input className={inputCls} value={d.notaPreco} onChange={(e) => set("notaPreco", e.target.value)} />
           </Field>
         </Card>
 
-        {/* ---------- DESCRIÇÃO ---------- */}
-        <Card titulo="Descrição">
-          <Field label="Resumo para o card da página inicial" hint="Uma frase curta.">
-            <input className={inputCls} value={d.resumo} onChange={(e) => set("resumo", e.target.value)} />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Título da galeria">
-              <input className={inputCls} value={d.galeriaTitulo} placeholder="Conheça cada ambiente." onChange={(e) => set("galeriaTitulo", e.target.value)} />
-            </Field>
-            <Field label="Título dos diferenciais">
-              <input className={inputCls} value={d.destaquesTitulo} placeholder="Diferenciais" onChange={(e) => set("destaquesTitulo", e.target.value)} />
-            </Field>
-          </div>
-          <Field label="Texto da galeria">
-            <textarea className={`${inputCls} h-20 py-2`} value={d.galeriaTexto} placeholder="Fotos reais do imóvel." onChange={(e) => set("galeriaTexto", e.target.value)} />
-          </Field>
-          <Field label="Diferenciais" hint="Um por linha.">
+        {/* ---------- 4. DESCRIÇÃO ---------- */}
+        <Card numero={4} titulo="Descrição do imóvel" descricao="Textos que aparecem mais para baixo na página.">
+          <Field
+            label="Lista de diferenciais"
+            explica="Escreva um diferencial por linha (no celular, toque em Enter/↵ para pular linha). Cada linha vira um item com ✓ na página."
+            ondeAparece="na seção de diferenciais, no meio da página."
+          >
             <textarea
-              className={`${inputCls} h-40 py-2`}
+              className={`${inputCls} h-44 py-2`}
               value={d.destaquesItens}
-              placeholder={"Sacada com churrasqueira\nVaga de garagem privativa\nAcabamento com gesso"}
+              placeholder={"Sacada com churrasqueira\nVaga de garagem coberta\nAcabamento com gesso\nPerto do centro"}
               onChange={(e) => set("destaquesItens", e.target.value)}
             />
           </Field>
-          <Field label="Texto curto acima dos diferenciais (opcional)">
+
+          <Field
+            label="Frase curta para a página inicial"
+            explica="Uma frase que resume o imóvel. Ex.: Apartamento novo com suíte e sacada com churrasqueira."
+            ondeAparece="no card deste imóvel na página inicial e em “Outros imóveis”."
+          >
+            <input className={inputCls} value={d.resumo} onChange={(e) => set("resumo", e.target.value)} />
+          </Field>
+
+          <Field
+            label="Título acima das fotos"
+            explica="Em branco, aparece “Conheça cada ambiente.”"
+            ondeAparece="em cima da galeria de fotos."
+          >
+            <input className={inputCls} value={d.galeriaTitulo} placeholder="Ex.: É só trazer suas malas." onChange={(e) => set("galeriaTitulo", e.target.value)} />
+          </Field>
+
+          <Field label="Texto acima das fotos" explica="Um parágrafo curto apresentando o imóvel. Em branco, aparece “Fotos reais do imóvel.”" ondeAparece="embaixo do título da galeria.">
+            <textarea className={`${inputCls} h-24 py-2`} value={d.galeriaTexto} onChange={(e) => set("galeriaTexto", e.target.value)} />
+          </Field>
+
+          <Field label="Título dos diferenciais" explica="Em branco, aparece “Diferenciais”. Ex.: O que fica para você." ondeAparece="em cima da lista de diferenciais.">
+            <input className={inputCls} value={d.destaquesTitulo} onChange={(e) => set("destaquesTitulo", e.target.value)} />
+          </Field>
+
+          <Field label="Frase embaixo do título dos diferenciais" explica="Opcional. Ex.: Tudo o que está no imóvel já é seu.">
             <input className={inputCls} value={d.destaquesTexto} onChange={(e) => set("destaquesTexto", e.target.value)} />
           </Field>
+
           {d.fotos.length > 1 && (
-            <Field label="Foto ao lado dos diferenciais">
+            <Field label="Foto ao lado dos diferenciais" explica="Em branco, uso a 2ª foto da lista.">
               <select className={inputCls} value={d.destaquesImagem} onChange={(e) => set("destaquesImagem", e.target.value)}>
                 <option value="">Automática (2ª foto)</option>
                 {d.fotos.map((f, n) => (
@@ -535,68 +734,91 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
           )}
         </Card>
 
-        {/* ---------- LOCALIZAÇÃO ---------- */}
-        <Card titulo="Localização">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Cidade">
-              <input className={inputCls} value={d.cidade} onChange={(e) => set("cidade", e.target.value)} />
-            </Field>
-            <Field label="Referência" hint="Ex.: 5 min do Centro • Portaria da WEG II">
-              <input className={inputCls} value={d.referencia} onChange={(e) => set("referencia", e.target.value)} />
-            </Field>
-          </div>
-          <Field label="Sobre a região">
-            <textarea className={`${inputCls} h-20 py-2`} value={d.locTexto} onChange={(e) => set("locTexto", e.target.value)} />
+        {/* ---------- 5. LOCALIZAÇÃO ---------- */}
+        <Card numero={5} titulo="Localização" descricao="Aparece num quadro branco sobre uma foto, perto dos diferenciais.">
+          <Field label="Cidade">
+            <input className={inputCls} value={d.cidade} onChange={(e) => set("cidade", e.target.value)} />
+          </Field>
+          <Field label="Ponto de referência" explica="Algo que ajude a pessoa a se localizar. Ex.: 5 min do Centro, Perto da WEG II.">
+            <input className={inputCls} value={d.referencia} onChange={(e) => set("referencia", e.target.value)} />
+          </Field>
+          <Field label="Sobre a região" explica="Uma ou duas frases sobre o bairro. Ex.: Bairro tranquilo, em crescimento, perto de escolas e mercado.">
+            <textarea className={`${inputCls} h-24 py-2`} value={d.locTexto} onChange={(e) => set("locTexto", e.target.value)} />
           </Field>
         </Card>
 
-        {/* ---------- AVANÇADO ---------- */}
+        {/* ---------- 6. EXTRAS ---------- */}
         <details className="rounded-2xl bg-white p-4 shadow-sm md:p-6">
-          <summary className="cursor-pointer font-display text-xl font-semibold">Avançado</summary>
-          <div className="mt-4 space-y-4">
+          <summary className="cursor-pointer">
+            <span className="font-display text-xl font-semibold">Opções extras</span>
+            <span className="block text-sm text-muted">
+              Pode pular esta parte. Tudo aqui é preenchido sozinho se ficar em branco.
+            </span>
+          </summary>
+          <div className="mt-6 space-y-6">
             <Field
-              label="Endereço da página"
-              hint={
+              label="Final do link da página"
+              explica={
                 editando
-                  ? "Cuidado: mudar o endereço quebra anúncios e links que já apontam para a página atual."
-                  : "Gerado a partir do nome. Use no link do anúncio."
+                  ? "⚠️ Só mude se for realmente necessário. Se mudar, os anúncios e links já divulgados com o endereço antigo param de funcionar."
+                  : "Criado a partir do nome do imóvel. Só letras minúsculas, números e hífen. Normalmente não precisa mexer."
               }
             >
               <div className="flex items-center rounded-xl border border-line bg-white focus-within:border-gold">
-                <span className="pl-3 text-sm text-muted">/</span>
+                <span className="pl-3 text-sm text-muted">{origem}/</span>
                 <input
-                  className="h-11 w-full rounded-xl px-1 text-[15px] outline-none"
+                  className="h-12 w-full rounded-xl px-1 text-base outline-none"
                   value={d.slug}
                   placeholder={slugify(d.nome)}
                   onChange={(e) => set("slug", slugify(e.target.value))}
                 />
               </div>
             </Field>
-            <Field label="Título no Google / aba do navegador" hint="Vazio = gerado automaticamente.">
+
+            <Field
+              label="Título no Google e na aba do navegador"
+              explica="O título que aparece quando alguém pesquisa no Google ou compartilha o link. Em branco, uso nome + preço + bairro."
+            >
               <input className={inputCls} value={d.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} />
             </Field>
-            <Field label="Descrição no Google / prévia do link">
-              <textarea className={`${inputCls} h-20 py-2`} value={d.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} />
+
+            <Field
+              label="Descrição ao compartilhar o link"
+              explica="O textinho que aparece embaixo do título quando o link é enviado no WhatsApp ou aparece no Google. Em branco, é montado sozinho."
+            >
+              <textarea className={`${inputCls} h-24 py-2`} value={d.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} />
             </Field>
 
             <div>
-              <span className="text-sm font-medium">Antes/depois mobiliado (IA)</span>
-              <p className="text-xs text-muted">
-                Opcional. Para cada ambiente, envie a foto real e uma versão mobiliada gerada por IA.
-              </p>
-              <div className="mt-2 space-y-2">
+              <span className="text-[15px] font-semibold">
+                Antes e depois mobiliado (feito por IA)
+                <span className="ml-1.5 text-xs font-normal text-muted">(pode deixar em branco)</span>
+              </span>
+              <span className="mt-0.5 block text-sm text-ink-soft">
+                Serve para mostrar como um cômodo <strong>vazio</strong> ficaria mobiliado. Para cada cômodo, envie a
+                foto real dele vazio e a mesma foto com móveis criada num aplicativo de inteligência artificial. Na
+                página, o cliente toca num botão para alternar entre as duas. Se não tiver essas imagens, ignore.
+              </span>
+              <div className="mt-3 space-y-2">
                 {d.comparativo.map((c, n) => (
-                  <div key={n} className="grid gap-2 rounded-xl border border-line p-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
-                    <input className={inputCls} placeholder="Ambiente" value={c.titulo} onChange={(e) => set("comparativo", d.comparativo.map((x, k) => (k === n ? { ...x, titulo: e.target.value } : x)))} />
-                    <ComparativoFoto valor={c.real} rotulo="Foto real" slug={slugEfetivo} onChange={(src) => set("comparativo", d.comparativo.map((x, k) => (k === n ? { ...x, real: src } : x)))} />
-                    <ComparativoFoto valor={c.mobiliado} rotulo="Mobiliada (IA)" slug={slugEfetivo} onChange={(src) => set("comparativo", d.comparativo.map((x, k) => (k === n ? { ...x, mobiliado: src } : x)))} />
-                    <button type="button" className="btn-admin h-11 px-2" onClick={() => set("comparativo", d.comparativo.filter((_, k) => k !== n))} aria-label="Remover">
-                      <Trash2 className="size-4" />
+                  <div key={n} className="space-y-2 rounded-xl border border-line p-3">
+                    <input
+                      className={inputCls}
+                      placeholder="Nome do cômodo. Ex.: Sala"
+                      value={c.titulo}
+                      onChange={(e) => set("comparativo", d.comparativo.map((x, k) => (k === n ? { ...x, titulo: e.target.value } : x)))}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <ComparativoFoto valor={c.real} rotulo="Foto real (vazio)" slug={slugEfetivo} onChange={(src) => set("comparativo", d.comparativo.map((x, k) => (k === n ? { ...x, real: src } : x)))} />
+                      <ComparativoFoto valor={c.mobiliado} rotulo="Foto com móveis (IA)" slug={slugEfetivo} onChange={(src) => set("comparativo", d.comparativo.map((x, k) => (k === n ? { ...x, mobiliado: src } : x)))} />
+                    </div>
+                    <button type="button" className="btn-admin h-9 text-red-600" onClick={() => set("comparativo", d.comparativo.filter((_, k) => k !== n))}>
+                      <Trash2 className="size-4" /> Remover este cômodo
                     </button>
                   </div>
                 ))}
-                <button type="button" className="btn-admin" onClick={() => set("comparativo", [...d.comparativo, { titulo: "", real: "", mobiliado: "" }])}>
-                  <Plus className="size-4" /> Adicionar par
+                <button type="button" className="btn-admin h-10" onClick={() => set("comparativo", [...d.comparativo, { titulo: "", real: "", mobiliado: "" }])}>
+                  <Plus className="size-4" /> Adicionar cômodo
                 </button>
               </div>
             </div>
@@ -609,15 +831,17 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
         <div className="mx-auto flex max-w-3xl items-center gap-3">
           <div className="min-w-0 flex-1 text-sm">
             {erro ? (
-              <p className="text-red-600">{erro}</p>
+              <p className="font-medium text-red-600">⚠️ {erro}</p>
             ) : salvoEm ? (
-              <p className="text-wa-dark">Salvo às {salvoEm}. Já está no site.</p>
+              <p className="font-medium text-wa-dark">✓ Salvo às {salvoEm}. Já está no site.</p>
+            ) : alterado ? (
+              <p className="text-gold">Alterações ainda não salvas</p>
             ) : (
-              <p className="truncate text-muted">/{slugEfetivo || "…"}</p>
+              <p className="text-muted">Nenhuma alteração</p>
             )}
           </div>
           {editando && (
-            <a href={`/${imovel.slug}`} target="_blank" rel="noopener noreferrer" className="btn-admin h-11">
+            <a href={`/${imovel.slug}`} target="_blank" rel="noopener noreferrer" className="btn-admin h-12">
               <ExternalLink className="size-4" /> Ver
             </a>
           )}
@@ -625,7 +849,7 @@ export function ImovelForm({ imovel }: { imovel?: Imovel }) {
             type="button"
             onClick={salvar}
             disabled={salvando || enviando > 0}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-ink px-6 font-semibold text-white disabled:opacity-60"
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-ink px-7 text-base font-semibold text-white disabled:opacity-60"
           >
             {salvando && <Loader2 className="size-4 animate-spin" />} Salvar
           </button>
@@ -648,15 +872,18 @@ function ComparativoFoto({
 }) {
   const [enviando, setEnviando] = useState(false);
   return (
-    <label className="flex h-11 cursor-pointer items-center gap-2 overflow-hidden rounded-xl border border-line px-2 text-sm">
-      {enviando ? (
-        <Loader2 className="size-4 animate-spin" />
-      ) : valor ? (
-        <img src={valor} alt="" className="size-8 rounded object-cover" />
-      ) : (
-        <ImagePlus className="size-4 text-muted" />
-      )}
-      <span className="truncate text-muted">{rotulo}</span>
+    <label className="flex cursor-pointer flex-col items-center gap-1 overflow-hidden rounded-xl border-2 border-dashed border-line p-2 text-center text-xs">
+      <span className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-lg bg-sand">
+        {enviando ? (
+          <Loader2 className="size-5 animate-spin" />
+        ) : valor ? (
+          <img src={valor} alt="" className="size-full object-cover" />
+        ) : (
+          <ImagePlus className="size-6 text-muted" />
+        )}
+      </span>
+      <span className="font-medium">{rotulo}</span>
+      <span className="text-muted">{valor ? "Toque para trocar" : "Toque para enviar"}</span>
       <input
         type="file"
         accept="image/*"

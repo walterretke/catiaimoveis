@@ -43,20 +43,20 @@ export function normalizeImovel(input: unknown): Result {
   const d = obj(input);
 
   const nome = txt(d.nome, 120);
-  if (!nome) return { ok: false, erro: "Informe o nome do imóvel." };
+  if (!nome) return { ok: false, erro: "Falta o nome do imóvel (seção 1)." };
 
   const preco = num(d.preco);
-  if (!preco) return { ok: false, erro: "Informe o preço." };
+  if (!preco) return { ok: false, erro: "Falta o preço (seção 1)." };
 
   const slug = slugify(txt(d.slug) || nome);
-  if (!slug) return { ok: false, erro: "Endereço da página (slug) inválido." };
-  if (SLUGS_RESERVADOS.has(slug)) return { ok: false, erro: `O endereço "/${slug}" é reservado. Escolha outro.` };
+  if (!slug) return { ok: false, erro: "O link da página ficou vazio. Confira o nome do imóvel." };
+  if (SLUGS_RESERVADOS.has(slug)) return { ok: false, erro: `O link "/${slug}" não pode ser usado. Mude o nome do imóvel ou o final do link (em Opções extras).` };
 
   const galeria = obj(d.galeria);
   const fotos: Foto[] = lista(galeria.fotos)
     .map((f) => ({ src: imagem(obj(f).src), legenda: txt(obj(f).legenda, 80) }))
     .filter((f) => f.src);
-  if (fotos.length === 0) return { ok: false, erro: "Adicione pelo menos uma foto." };
+  if (fotos.length === 0) return { ok: false, erro: "Falta pelo menos uma foto (seção 2)." };
 
   const status = STATUS.includes(d.status as ImovelStatus) ? (d.status as ImovelStatus) : "disponivel";
   const tipo = txt(d.tipo, 40) || "Imóvel";

@@ -59,7 +59,7 @@ export async function salvarImovel(dados: unknown, slugOriginal: string): Promis
 
   const res = await alterar((lista) => {
     const conflito = lista.find((i) => i.slug === novo.slug && i.slug !== slugOriginal);
-    if (conflito) return `Já existe um imóvel com o endereço "/${novo.slug}".`;
+    if (conflito) return `Já existe outro imóvel com o link "/${novo.slug}". Mude um pouco o nome (ex.: acrescente o bairro).`;
     const idx = lista.findIndex((i) => i.slug === slugOriginal);
     if (slugOriginal && idx >= 0) return lista.map((i, n) => (n === idx ? novo : i));
     return [novo, ...lista]; // novo aparece primeiro na home
