@@ -21,7 +21,8 @@ export const IMOVEIS_TAG = "imoveis";
 const VERSAO_PREFIX = "data/imoveis-";
 const MAX_VERSOES = 30;
 
-const temBlob = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+// Token de leitura/escrita ou, nas conexões novas da Vercel, BLOB_STORE_ID + OIDC.
+const temBlob = () => !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 
 /** `false` quando está na Vercel sem Blob configurado (painel não consegue salvar). */
 export function storageDisponivel(): boolean {
