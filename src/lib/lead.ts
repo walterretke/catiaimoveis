@@ -111,11 +111,18 @@ export interface LeadEventPayload {
   custom_data: { content_name: string; entrada: EntradaId };
 }
 
+export interface RegistroStorage {
+  getItem: (chave: string) => string | null;
+  setItem: (chave: string, valor: string) => void;
+}
+
 export interface TrackingDeps {
   /** `window.fbq` (pode não existir se o pixel foi bloqueado). */
   fbq?: (...args: unknown[]) => void;
   /** Envia para `/api/meta` em background (sem await). */
   sendServerEvent: (payload: LeadEventPayload) => void;
+  /** `localStorage`. Sem ele, os eventos são sempre enviados. */
+  storage?: RegistroStorage;
 }
 
 export interface TrackingContext {
@@ -123,11 +130,38 @@ export interface TrackingContext {
   contentName: string;
   url: string;
   userAgent: string;
+  /** O que evita repetição. Padrão: `contentName`. */
+  registroId?: string;
+  /** Instante atual em ms. Padrão: `Date.now()`. */
+  agora?: number;
+}
+
+/** A mesma pessoa só gera o mesmo evento, para o mesmo imóvel, uma vez nesse período. */
+export const JANELA_REPETICAO_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Armazenamento bloqueado ou cheio nunca pode impedir o evento nem o WhatsApp. */
+function jaRegistrado(chave: string, agora: number, storage?: RegistroStorage): boolean {
+  try {
+    const anterior = Number(storage?.getItem(chave));
+    return anterior > 0 && agora - anterior < JANELA_REPETICAO_MS;
+  } catch {
+    return false;
+  }
+}
+
+function registrar(chave: string, agora: number, storage?: RegistroStorage) {
+  try {
+    storage?.setItem(chave, String(agora));
+  } catch {
+    // Sem registro, o pior caso é um evento repetido.
+  }
 }
 
 /**
  * Qualificado: dispara `Lead` (Pixel + CAPI, deduplicados pelo event_id).
  * Não qualificado: dispara só o evento personalizado `SemEntrada`.
+ * Quem repete a mesma resposta no período de `JANELA_REPETICAO_MS` não gera outro
+ * evento, para um interessado não contar como vários Leads.
  * Retorna se foi Lead.
  */
 export function trackEntrada(
@@ -137,6 +171,10 @@ export function trackEntrada(
 ): boolean {
   const customData = { content_name: ctx.contentName, entrada: opcao.id };
   const eventName: ServerEventName = opcao.qualificado ? "Lead" : "SemEntrada";
+  const agora = ctx.agora ?? Date.now();
+  const chave = `cm_evento:${eventName}:${ctx.registroId ?? ctx.contentName}`;
+
+  if (jaRegistrado(chave, agora, deps.storage)) return opcao.qualificado;
 
   deps.fbq?.(opcao.qualificado ? "track" : "trackCustom", eventName, customData, {
     eventID: ctx.eventId,
@@ -148,6 +186,7 @@ export function trackEntrada(
     client_user_agent: ctx.userAgent,
     custom_data: customData,
   });
+  registrar(chave, agora, deps.storage);
   return opcao.qualificado;
 }
 

@@ -26,7 +26,7 @@ export default async function ImovelGenericoPage({ searchParams }: Props) {
   const valor = param(params.valor);
   const assunto = nome ? `${nome}${valor ? ` (R$ ${valor})` : ""}` : undefined;
   // "450.000" -> 450000 -> entrada de 20% para as faixas da enquete
-  const valorNum = valor ? Number(valor.replace(/D/g, "")) : 0;
+  const valorNum = valor ? Number(valor.replace(/\D/g, "")) : 0;
   const entradaMinima = valorNum >= 10_000 ? Math.round((valorNum * ENTRADA_PADRAO) / 100) * 100 : undefined;
 
   return (

@@ -49,15 +49,25 @@ Para um imóvel de R$ 385.000:
 
 Quem abre a pergunta também gera `AbriuEnquete` (só Pixel), para ver o funil.
 
+A mesma pessoa só gera o mesmo evento, para o mesmo imóvel, uma vez a cada 30 dias
+(registrado no navegador). Ela continua indo para o WhatsApp normalmente.
+
 **Uso sugerido no Meta Ads:**
 - Crie um público personalizado com quem disparou `SemEntrada` e **exclua-o** das campanhas.
+  Exceção: não exclua em campanhas de imóveis com Minha Casa, Minha Vida.
+- Nesses imóveis, preencha a entrada mínima com o valor de uma simulação real, porque
+  ele define quem conta como `Lead`.
 - Com volume suficiente, crie a conversão personalizada `Lead` + `entrada = completa`.
+
+A rota `/api/meta` só aceita eventos cuja origem e URL sejam do próprio site. Sem o cookie
+`_fbc`, ela monta o valor a partir do `fbclid` da URL.
 
 | Arquivo | Papel |
 |---|---|
 | `src/lib/lead.ts` | Faixas, regra de qualificação e mensagem do WhatsApp (testes em `lead.test.ts`) |
 | `src/components/lead/LeadProvider.tsx` | Pergunta e redirecionamento para o WhatsApp |
 | `src/app/api/meta/route.ts` | API de Conversões (aceita só `Lead` e `SemEntrada`) |
+| `src/lib/meta-event.ts` | Validação da origem e montagem do `fbc` (testes em `meta-event.test.ts`) |
 | `src/app/(site)/layout.tsx` | Pixel (`PageView`). Fica fora do `/admin` |
 
 Para testar sem sujar os dados, defina `META_TEST_EVENT_CODE` com o código da aba

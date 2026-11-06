@@ -33,6 +33,15 @@ export function useLead() {
   return ctx;
 }
 
+/** Acessar o localStorage pode lançar erro em navegação privada ou com cookies bloqueados. */
+function storageSeguro(): Storage | undefined {
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 function newEventId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -84,9 +93,12 @@ export function LeadProvider({ assunto, contentName, entradaMinima, children }: 
         contentName,
         url: window.location.href,
         userAgent: navigator.userAgent,
+        // A página genérica usa o mesmo contentName para imóveis diferentes.
+        registroId: assunto ? `${contentName}|${assunto}` : contentName,
       },
       {
         fbq: window.fbq,
+        storage: storageSeguro(),
         sendServerEvent: (payload) => {
           fetch("/api/meta", {
             method: "POST",

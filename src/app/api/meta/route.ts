@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { fbcDoClique, origemPermitida } from "@/lib/meta-event";
 
 // API de Conversões do Meta (lado servidor). Recebe o mesmo event_id do Pixel
 // para o Meta deduplicar. A decisão de QUANDO disparar fica em `src/lib/lead.ts`.
@@ -19,6 +20,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing Meta credentials" }, { status: 500 });
   }
 
+  const origin = request.headers.get("origin");
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  if (!origemPermitida(origin, host)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -36,6 +43,9 @@ export async function POST(request: NextRequest) {
     !eventUrl?.startsWith("http")
   ) {
     return NextResponse.json({ error: "Invalid event" }, { status: 400 });
+  }
+  if (!origemPermitida(origin, host, eventUrl)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const custom = (body.custom_data ?? {}) as Record<string, unknown>;
@@ -60,7 +70,7 @@ export async function POST(request: NextRequest) {
       // Cookies do Pixel (mesma origem, chegam junto no fetch): melhoram a
       // correspondência do evento com quem clicou no anúncio.
       fbp: request.cookies.get("_fbp")?.value,
-      fbc: request.cookies.get("_fbc")?.value,
+      fbc: fbcDoClique(request.cookies.get("_fbc")?.value, eventUrl, Date.now()),
     },
     custom_data: {
       ...(contentName && { content_name: contentName }),

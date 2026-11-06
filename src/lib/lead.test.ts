@@ -5,6 +5,7 @@ import {
   buildWhatsAppUrl,
   entradaOpcoes,
   formatMil,
+  JANELA_REPETICAO_MS,
   trackAbriuEnquete,
   trackEntrada,
   type LeadEventPayload,
@@ -82,6 +83,67 @@ test("pixel bloqueado (sem fbq) ainda envia pela CAPI", () => {
   const sent: LeadEventPayload[] = [];
   trackEntrada(entradaOpcoes()[0], ctx, { sendServerEvent: (p) => void sent.push(p) });
   assert.equal(sent.length, 1);
+});
+
+function memoria() {
+  const dados = new Map<string, string>();
+  return {
+    getItem: (c: string) => dados.get(c) ?? null,
+    setItem: (c: string, v: string) => void dados.set(c, v),
+  };
+}
+
+test("repetir a mesma resposta no mesmo imóvel não gera outro Lead", () => {
+  const { fbqCalls, serverCalls, deps, ctx } = setup();
+  const d = { ...deps, storage: memoria() };
+  const completa = entradaOpcoes()[0];
+
+  assert.equal(trackEntrada(completa, { ...ctx, agora: 1000 }, d), true);
+  assert.equal(trackEntrada(completa, { ...ctx, eventId: "evt-2", agora: 2000 }, d), true);
+  assert.equal(trackEntrada(entradaOpcoes()[1], { ...ctx, eventId: "evt-3", agora: 3000 }, d), true);
+
+  assert.equal(fbqCalls.length, 1);
+  assert.equal(serverCalls.length, 1);
+});
+
+test("Lead em outro imóvel conta, e depois da janela conta de novo", () => {
+  const { serverCalls, deps, ctx } = setup();
+  const d = { ...deps, storage: memoria() };
+  const completa = entradaOpcoes()[0];
+
+  trackEntrada(completa, { ...ctx, agora: 1000 }, d);
+  trackEntrada(completa, { ...ctx, contentName: "outro", agora: 2000 }, d);
+  trackEntrada(completa, { ...ctx, registroId: "generico|Casa A", agora: 3000 }, d);
+  trackEntrada(completa, { ...ctx, registroId: "generico|Casa B", agora: 4000 }, d);
+  trackEntrada(completa, { ...ctx, agora: 1000 + JANELA_REPETICAO_MS }, d);
+
+  assert.equal(serverCalls.length, 5);
+});
+
+test("SemEntrada e depois Lead no mesmo imóvel: os dois contam", () => {
+  const { serverCalls, deps, ctx } = setup();
+  const d = { ...deps, storage: memoria() };
+  const opcoes = entradaOpcoes();
+
+  trackEntrada(opcoes[2], { ...ctx, agora: 1000 }, d);
+  trackEntrada(opcoes[0], { ...ctx, agora: 2000 }, d);
+
+  assert.deepEqual(serverCalls.map((c) => c.event_name), ["SemEntrada", "Lead"]);
+});
+
+test("armazenamento com erro não impede o evento", () => {
+  const { serverCalls, deps, ctx } = setup();
+  const quebrado = {
+    getItem: () => {
+      throw new Error("bloqueado");
+    },
+    setItem: () => {
+      throw new Error("bloqueado");
+    },
+  };
+
+  assert.equal(trackEntrada(entradaOpcoes()[0], ctx, { ...deps, storage: quebrado }), true);
+  assert.equal(serverCalls.length, 1);
 });
 
 test("abrir a enquete gera só AbriuEnquete (nunca Lead)", () => {
