@@ -33,6 +33,27 @@ entram no site na hora, sem precisar de deploy.
 Para anúncios de imóveis sem página própria, use a página genérica:
 `/imovel?nome=Casa%20no%20Centro&valor=450.000`
 
+## Conector do Claude (/api/mcp)
+
+Permite gerenciar os imóveis conversando com o Claude, inclusive pelo celular:
+"baixa o Mirage para 370 mil", "marca o Baependi como vendido", "melhora o texto
+do bairro do geminado".
+
+Ferramentas: `listar_imoveis`, `ver_imovel`, `atualizar_imovel`, `alterar_status`
+e `desfazer_ultima_alteracao`. Usam o mesmo armazenamento e a mesma validação do
+painel, e cada alteração entra no histórico do Desfazer.
+
+De propósito, ficam **só no painel**: cadastrar imóvel novo, enviar, remover ou
+reordenar fotos, excluir imóvel e trocar o link (slug), que é o destino dos anúncios.
+
+**Configurar:**
+1. Na Vercel, crie a variável `MCP_TOKEN` (`openssl rand -hex 32`) e faça o deploy.
+2. No Claude: Configurações > Conectores > Adicionar conector personalizado, com a URL
+   `https://<dominio>/api/mcp/<MCP_TOKEN>`.
+
+A URL funciona como senha: quem tiver a URL consegue alterar os imóveis. Para
+revogar, troque o `MCP_TOKEN`. Sem token válido, a rota responde 404.
+
 ## Rastreamento (Meta Pixel + API de Conversões)
 
 **Regra:** só conta como `Lead` quem tem entrada.
